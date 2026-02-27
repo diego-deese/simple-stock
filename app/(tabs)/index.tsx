@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,81 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useApp } from '../../src/context/AppContext';
 import { Product } from '../../src/types';
 import { colors } from '../../src/theme/colors';
+
+// ─── ProductItem extraído para poder usar hooks propios ───────────────────────
+interface ProductItemProps {
+  item: Product;
+  quantity: number;
+  onDecrement: () => void;
+  onIncrement: () => void;
+  onQuantityChange: (value: number) => void;
+}
+
+function ProductItem({ item, quantity, onDecrement, onIncrement, onQuantityChange }: ProductItemProps) {
+  const [inputText, setInputText] = useState(String(quantity));
+
+  // Sincronizar desde afuera (cuando +/- actualizan a través del contexto)
+  useEffect(() => {
+    setInputText(String(quantity));
+  }, [quantity]);
+
+  const handleChangeText = (text: string) => {
+    // Permitir sólo dígitos
+    const clean = text.replace(/[^0-9]/g, '');
+    setInputText(clean);
+  };
+
+  const commitValue = () => {
+    const parsed = parseInt(inputText, 10);
+    const newValue = isNaN(parsed) ? 0 : Math.max(0, parsed);
+    setInputText(String(newValue));
+    onQuantityChange(newValue);
+  };
+
+  return (
+    <View style={styles.productItem}>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName}>{item.name}</Text>
+        <Text style={styles.productUnit}>({item.unit})</Text>
+      </View>
+
+      <View style={styles.quantityContainer}>
+        <TouchableOpacity
+          style={[styles.quantityButton, styles.decreaseButton]}
+          onPress={onDecrement}
+        >
+          <Text style={styles.buttonText}>−</Text>
+        </TouchableOpacity>
+
+        <TextInput
+          style={styles.quantityDisplay}
+          value={inputText}
+          onChangeText={handleChangeText}
+          onEndEditing={commitValue}
+          onBlur={commitValue}
+          keyboardType="numeric"
+          returnKeyType="done"
+          selectTextOnFocus
+          maxLength={6}
+          textAlign="center"
+        />
+
+        <TouchableOpacity
+          style={[styles.quantityButton, styles.increaseButton]}
+          onPress={onIncrement}
+        >
+          <Text style={styles.buttonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function MonthlyReportScreen() {
   const { products, tempCounts, updateTempCount, saveReport, loading } = useApp();
@@ -125,37 +196,17 @@ export default function MonthlyReportScreen() {
     );
   };
 
-  // Item de producto en la lista
-  const ProductItem = ({ item }: { item: Product }) => {
+  // Item de producto en la lista — ahora renderizado con el componente externo
+  const renderProductItem = ({ item }: { item: Product }) => {
     const quantity = getCurrentQuantity(item.name);
-    
     return (
-      <View style={styles.productItem}>
-        <View style={styles.productInfo}>
-          <Text style={styles.productName}>{item.name}</Text>
-          <Text style={styles.productUnit}>({item.unit})</Text>
-        </View>
-        
-        <View style={styles.quantityContainer}>
-          <TouchableOpacity
-            style={[styles.quantityButton, styles.decreaseButton]}
-            onPress={() => updateQuantity(item.name, -1)}
-          >
-            <Text style={styles.buttonText}>−</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.quantityDisplay}>
-            <Text style={styles.quantityText}>{quantity}</Text>
-          </View>
-          
-          <TouchableOpacity
-            style={[styles.quantityButton, styles.increaseButton]}
-            onPress={() => updateQuantity(item.name, 1)}
-          >
-            <Text style={styles.buttonText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ProductItem
+        item={item}
+        quantity={quantity}
+        onDecrement={() => updateQuantity(item.name, -1)}
+        onIncrement={() => updateQuantity(item.name, 1)}
+        onQuantityChange={(value) => updateTempCount(item.name, value)}
+      />
     );
   };
 
@@ -180,7 +231,7 @@ export default function MonthlyReportScreen() {
       <FlatList
         data={products}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <ProductItem item={item} />}
+        renderItem={renderProductItem}
         style={styles.productList}
         showsVerticalScrollIndicator={false}
       />
@@ -293,16 +344,14 @@ const styles = StyleSheet.create({
     height: 60,
     backgroundColor: colors.backgroundDark,
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginHorizontal: 12,
     borderWidth: 2,
     borderColor: colors.border,
-  },
-  quantityText: {
     fontSize: 24,
     fontWeight: 'bold',
     color: colors.textPrimary,
+    paddingHorizontal: 4,
+    textAlignVertical: 'center',
   },
   footer: {
     padding: 20,
