@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../../src/theme/colors';
+import { colors } from '@theme/colors';
 
 // Iconos simples usando emojis para alta legibilidad
 const TabIcon = ({ emoji, focused }: { emoji: string; focused: boolean }) => (
@@ -59,13 +59,13 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="catalog"
         options={{
-          href: null, // Ocultar del tab bar
+          href: null,
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          href: null, // Ocultar del tab bar
+          href: null,
         }}
       />
     </Tabs>

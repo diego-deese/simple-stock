@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { Product } from '../types';
+import { Product } from '@app-types/index';
 
 /**
  * Repositorio para operaciones con productos.

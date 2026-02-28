@@ -1,4 +1,4 @@
-import { adminRepository } from '../repositories/AdminRepository';
+import { adminRepository } from '@repositories/AdminRepository';
 
 /**
  * Función simple de hash para contraseñas.

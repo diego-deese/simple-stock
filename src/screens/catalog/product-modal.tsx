@@ -1,0 +1,223 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
+import { Product } from '@app-types/index';
+import { colors } from '@theme/colors';
+
+const COMMON_UNITS = ['kg', 'litros', 'bultos', 'cajas', 'latas', 'paquetes', 'unidades'];
+
+interface ProductModalProps {
+  visible: boolean;
+  editingProduct: Product | null;
+  productName: string;
+  productUnit: string;
+  saving: boolean;
+  onNameChange: (name: string) => void;
+  onUnitChange: (unit: string) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}
+
+export function ProductModal({
+  visible,
+  editingProduct,
+  productName,
+  productUnit,
+  saving,
+  onNameChange,
+  onUnitChange,
+  onCancel,
+  onSave,
+}: ProductModalProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="slide"
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>
+            {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
+          </Text>
+          
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Nombre del producto *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={productName}
+              onChangeText={onNameChange}
+              placeholder="Ej: Arroz, Frijoles, etc."
+              placeholderTextColor="#999"
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Unidad de medida *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={productUnit}
+              onChangeText={onUnitChange}
+              placeholder="Ej: kg, litros, bultos"
+              placeholderTextColor="#999"
+            />
+            
+            <Text style={styles.unitsLabel}>Unidades comunes:</Text>
+            <View style={styles.unitsContainer}>
+              {COMMON_UNITS.map((unit) => (
+                <TouchableOpacity
+                  key={unit}
+                  style={[
+                    styles.unitButton,
+                    productUnit === unit && styles.unitButtonSelected
+                  ]}
+                  onPress={() => onUnitChange(unit)}
+                >
+                  <Text style={[
+                    styles.unitButtonText,
+                    productUnit === unit && styles.unitButtonTextSelected
+                  ]}>
+                    {unit}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.cancelButton]}
+              onPress={onCancel}
+              disabled={saving}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.modalButton, styles.saveButton]}
+              onPress={onSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.saveButtonText}>
+                  {editingProduct ? 'Actualizar' : 'Agregar'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    backgroundColor: colors.backgroundDark,
+  },
+  unitsLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  unitsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  unitButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: colors.backgroundDark,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  unitButtonSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  unitButtonText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  unitButtonTextSelected: {
+    color: colors.textLight,
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 6,
+  },
+  cancelButton: {
+    backgroundColor: colors.backgroundDark,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textLight,
+  },
+});

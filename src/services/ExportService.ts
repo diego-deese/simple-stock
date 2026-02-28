@@ -1,7 +1,7 @@
 import { File, Directory, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { reportRepository } from '../repositories/ReportRepository';
-import { productRepository } from '../repositories/ProductRepository';
+import { reportRepository } from '@repositories/ReportRepository';
+import { productRepository } from '@repositories/ProductRepository';
 
 /**
  * Servicio para exportación de datos.

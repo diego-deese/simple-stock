@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { adminService } from '../services';
-import { AuthContextType } from '../types';
-import { useApp } from './AppContext';
+import { adminService } from '@services/index';
+import { AuthContextType } from '@app-types/index';
+import { useApp } from '@context/AppContext';
 
 // Crear el contexto
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
