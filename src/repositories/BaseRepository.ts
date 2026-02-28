@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import { dbConnection } from '../database/connection';
+import { dbConnection } from '@database/connection';
 
 // Tipo para valores que SQLite acepta como parámetros
 type SQLiteBindValue = string | number | null | boolean | Uint8Array;

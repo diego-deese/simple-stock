@@ -1,6 +1,6 @@
 import { BaseRepository } from './BaseRepository';
-import { Report, ReportDetail, TempCount, ReportWithDetails } from '../types';
-import { dbConnection } from '../database/connection';
+import { Report, ReportDetail, TempCount, ReportWithDetails } from '@app-types/index';
+import { dbConnection } from '@database/connection';
 
 /**
  * Repositorio para operaciones con reportes.

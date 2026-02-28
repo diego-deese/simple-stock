@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { TempCount } from '../types';
+import { TempCount } from '@app-types/index';
 
 /**
  * Repositorio para conteos temporales.

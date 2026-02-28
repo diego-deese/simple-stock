@@ -1,5 +1,5 @@
 import { BaseRepository } from './BaseRepository';
-import { AdminCredentials } from '../types';
+import { AdminCredentials } from '@app-types/index';
 
 /**
  * Repositorio para gestionar las credenciales de administrador.

@@ -1,6 +1,6 @@
-import { reportRepository, reportDetailRepository } from '../repositories/ReportRepository';
-import { tempCountRepository } from '../repositories/TempCountRepository';
-import { Report, ReportDetail, TempCount, ReportWithDetails } from '../types';
+import { reportRepository, reportDetailRepository } from '@repositories/ReportRepository';
+import { tempCountRepository } from '@repositories/TempCountRepository';
+import { Report, ReportDetail, TempCount, ReportWithDetails } from '@app-types/index';
 
 /**
  * Servicio para la lógica de negocio de reportes.

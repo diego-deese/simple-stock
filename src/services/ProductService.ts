@@ -1,5 +1,5 @@
-import { productRepository } from '../repositories/ProductRepository';
-import { Product } from '../types';
+import { productRepository } from '@repositories/ProductRepository';
+import { Product } from '@app-types/index';
 
 /**
  * Servicio para la lógica de negocio de productos.

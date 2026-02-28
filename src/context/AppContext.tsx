@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useState, ReactNode } from 'react';
-import { Product, Report, ReportDetail, TempCount, AppContextType, AppState, AppAction } from '../types';
-import { initializeDatabase } from '../database';
-import { productService, reportService, exportService } from '../services';
+import { Product, Report, ReportDetail, TempCount, AppContextType, AppState, AppAction } from '@app-types/index';
+import { initializeDatabase } from '@database/index';
+import { productService, reportService, exportService } from '@services/index';
 
 // Estado inicial
 const initialState: AppState = {

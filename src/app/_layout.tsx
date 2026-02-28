@@ -1,9 +1,9 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppProvider } from '../src/context/AppContext';
-import { AuthProvider } from '../src/context/AuthContext';
-import { colors } from '../src/theme/colors';
+import { AppProvider } from '@context/AppContext';
+import { AuthProvider } from '@context/AuthContext';
+import { colors } from '@theme/colors';
 
 export default function RootLayout() {
   return (

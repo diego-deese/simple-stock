@@ -12,10 +12,11 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../src/context/AuthContext';
-import { colors } from '../../src/theme/colors';
+import { useAuth } from '@context/AuthContext';
+import { colors } from '@theme/colors';
+import { MenuItem } from './menu-item';
 
-export default function AdminScreen() {
+export function Admin() {
   const router = useRouter();
   const { isAuthenticated, isConfigured, loading, login, logout, setupAdmin, checkIsConfigured } = useAuth();
   
@@ -24,7 +25,6 @@ export default function AdminScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Re-check configuration cuando la pantalla se monta
   useEffect(() => {
     checkIsConfigured();
   }, [checkIsConfigured]);
@@ -107,29 +107,18 @@ export default function AdminScreen() {
         </View>
 
         <View style={styles.menuContainer}>
-          <TouchableOpacity
-            style={styles.menuItem}
+          <MenuItem
+            icon="📦"
+            title="Catálogo de Productos"
+            description="Agregar, editar o eliminar productos"
             onPress={() => router.navigate('/catalog')}
-          >
-            <Text style={styles.menuIcon}>📦</Text>
-            <View style={styles.menuTextContainer}>
-              <Text style={styles.menuTitle}>Catálogo de Productos</Text>
-              <Text style={styles.menuDescription}>Agregar, editar o eliminar productos</Text>
-            </View>
-            <Text style={styles.menuArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
+          />
+          <MenuItem
+            icon="📊"
+            title="Historial de Reportes"
+            description="Ver y exportar reportes guardados"
             onPress={() => router.navigate('/history')}
-          >
-            <Text style={styles.menuIcon}>📊</Text>
-            <View style={styles.menuTextContainer}>
-              <Text style={styles.menuTitle}>Historial de Reportes</Text>
-              <Text style={styles.menuDescription}>Ver y exportar reportes guardados</Text>
-            </View>
-            <Text style={styles.menuArrow}>›</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
     );
@@ -333,40 +322,5 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     padding: 20,
-  },
-  menuItem: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  menuIcon: {
-    fontSize: 40,
-    marginRight: 16,
-  },
-  menuTextContainer: {
-    flex: 1,
-  },
-  menuTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  menuDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  menuArrow: {
-    fontSize: 28,
-    color: colors.textMuted,
-    fontWeight: '300',
   },
 });
