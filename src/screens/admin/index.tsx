@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@context/AuthContext';
 import { colors } from '@theme/colors';
 import { MenuItem } from './menu-item';
+import AccessibleButton from '@components/AccessibleButton';
 
 export function Admin() {
   const router = useRouter();
@@ -166,17 +167,15 @@ export function Admin() {
               secureTextEntry
             />
 
-            <TouchableOpacity
-              style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+            <AccessibleButton
+              title="CREAR ADMINISTRADOR"
               onPress={handleSetup}
+              variant="primary"
               disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.submitButtonText}>CREAR ADMINISTRADOR</Text>
-              )}
-            </TouchableOpacity>
+              loading={submitting}
+              style={styles.submitButton}
+              responsiveText
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -215,17 +214,15 @@ export function Admin() {
             secureTextEntry
           />
 
-          <TouchableOpacity
-            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+          <AccessibleButton
+            title="ENTRAR"
             onPress={handleLogin}
+            variant="primary"
             disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.submitButtonText}>ENTRAR</Text>
-            )}
-          </TouchableOpacity>
+            loading={submitting}
+            style={styles.submitButton}
+            responsiveText
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -306,19 +303,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   submitButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 18,
-    alignItems: 'center',
     marginTop: 32,
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-  submitButtonText: {
-    color: colors.textLight,
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   menuContainer: {
     padding: 20,

@@ -3,10 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 import { Product } from '@app-types/index';
 import { colors } from '@theme/colors';
+import AccessibleButton from '@components/AccessibleButton';
 
 interface CatalogItemProps {
   item: Product;
@@ -23,19 +23,21 @@ export function CatalogItem({ item, onEdit, onDelete }: CatalogItemProps) {
       </View>
       
       <View style={styles.productActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
+        <AccessibleButton
+          title="Editar"
           onPress={() => onEdit(item)}
-        >
-          <Text style={styles.editButtonText}>Editar</Text>
-        </TouchableOpacity>
+          variant="primary"
+          style={styles.actionButton}
+          responsiveText
+        />
         
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
+        <AccessibleButton
+          title="Eliminar"
           onPress={() => onDelete(item)}
-        >
-          <Text style={styles.deleteButtonText}>Eliminar</Text>
-        </TouchableOpacity>
+          variant="danger"
+          style={styles.actionButton}
+          responsiveText
+        />
       </View>
     </View>
   );
@@ -72,27 +74,9 @@ const styles = StyleSheet.create({
   productActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    gap: 12,
   },
   actionButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginLeft: 12,
-  },
-  editButton: {
-    backgroundColor: colors.primaryLight,
-  },
-  deleteButton: {
-    backgroundColor: colors.error,
-  },
-  editButtonText: {
-    color: colors.textLight,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  deleteButtonText: {
-    color: colors.textLight,
-    fontWeight: '600',
-    fontSize: 16,
+    minWidth: 100,
   },
 });

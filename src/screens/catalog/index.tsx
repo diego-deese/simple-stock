@@ -15,6 +15,7 @@ import { Product } from '@app-types/index';
 import { colors } from '@theme/colors';
 import { CatalogItem } from './catalog-item';
 import { ProductModal } from './product-modal';
+import AccessibleButton from '@components/AccessibleButton';
 
 export function Catalog() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -138,12 +139,12 @@ export function Catalog() {
       </View>
 
       <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.addButton}
+        <AccessibleButton
+          title="+ AGREGAR PRODUCTO"
           onPress={openAddModal}
-        >
-          <Text style={styles.addButtonText}>+ AGREGAR PRODUCTO</Text>
-        </TouchableOpacity>
+          variant="success"
+          style={styles.addButton}
+        />
 
         <FlatList
           data={products.filter(p => p.active)}
@@ -229,17 +230,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   addButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    alignItems: 'center',
     marginBottom: 20,
-  },
-  addButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textLight,
   },
   productList: {
     flex: 1,

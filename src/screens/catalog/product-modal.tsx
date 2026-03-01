@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { Product } from '@app-types/index';
 import { colors } from '@theme/colors';
+import AccessibleButton from '@components/AccessibleButton';
 
 const COMMON_UNITS = ['kg', 'litros', 'bultos', 'cajas', 'latas', 'paquetes', 'unidades'];
 
@@ -92,27 +92,24 @@ export function ProductModal({
           </View>
           
           <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
+            <AccessibleButton
+              title="Cancelar"
               onPress={onCancel}
+              variant="secondary"
               disabled={saving}
-            >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
+              style={styles.modalButton}
+              responsiveText
+            />
             
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
+            <AccessibleButton
+              title={editingProduct ? 'Actualizar' : 'Agregar'}
               onPress={onSave}
+              variant="primary"
               disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.saveButtonText}>
-                  {editingProduct ? 'Actualizar' : 'Agregar'}
-                </Text>
-              )}
-            </TouchableOpacity>
+              loading={saving}
+              style={styles.modalButton}
+              responsiveText
+            />
           </View>
         </View>
       </View>
@@ -194,30 +191,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 24,
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 6,
-  },
-  cancelButton: {
-    backgroundColor: colors.backgroundDark,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textLight,
   },
 });

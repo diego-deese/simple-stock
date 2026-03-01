@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   Modal,
   ActivityIndicator,
 } from 'react-native';
 import { Report, ReportDetail } from '@app-types/index';
 import { colors } from '@theme/colors';
+import AccessibleButton from '@components/AccessibleButton';
 
 interface ReportDetailsModalProps {
   visible: boolean;
@@ -74,20 +74,20 @@ export function ReportDetailsModal({
               />
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.exportButton]}
+                <AccessibleButton
+                  title="Exportar CSV"
                   onPress={onExport}
                   disabled={exporting}
-                >
-                  <Text style={styles.exportButtonText}>Exportar CSV</Text>
-                </TouchableOpacity>
+                  variant="primary"
+                  style={styles.modalButton}
+                />
                 
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.closeButton]}
+                <AccessibleButton
+                  title="Cerrar"
                   onPress={onClose}
-                >
-                  <Text style={styles.closeButtonText}>Cerrar</Text>
-                </TouchableOpacity>
+                  variant="secondary"
+                  style={styles.modalButton}
+                />
               </View>
             </>
           )}
@@ -169,30 +169,9 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 6,
-  },
-  exportButton: {
-    backgroundColor: colors.primary,
-  },
-  closeButton: {
-    backgroundColor: colors.backgroundDark,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  exportButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textLight,
-  },
-  closeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
   },
 });
