@@ -66,7 +66,7 @@ export function ReportDetailsModal({
 
           <View style={styles.modalButtons}>
             <AccessibleButton
-              title="Exportar CSV"
+              title="Exportar"
               onPress={onExport}
               disabled={exporting}
               variant="primary"
