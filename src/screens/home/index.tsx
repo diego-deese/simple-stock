@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useApp } from '@context/AppContext';
 import { Product } from '@app-types/index';
@@ -19,6 +20,10 @@ export function Home() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const { width } = useWindowDimensions();
+  
+  // Ajustar tamaño de fuente según ancho de pantalla
+  const buttonFontSize = width < 420 ? 16 : 18;
 
   // Memoizar el mapa de cantidades para evitar recálculos innecesarios
   const quantityMap = useMemo(() => {
@@ -100,6 +105,7 @@ export function Home() {
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderProductItem}
         style={styles.productList}
+        contentContainerStyle={styles.productListContent}
         showsVerticalScrollIndicator={false}
         extraData={quantityMap}
       />
@@ -115,7 +121,8 @@ export function Home() {
           >
             <Text style={[
               styles.editButtonText,
-              isEditMode && styles.editButtonTextActive
+              isEditMode && styles.editButtonTextActive,
+              { fontSize: buttonFontSize }
             ]}>
               {isEditMode ? 'CANCELAR' : 'EDITAR'}
             </Text>
@@ -131,7 +138,8 @@ export function Home() {
           >
             <Text style={[
               styles.saveButtonText,
-              !isEditMode && styles.saveButtonTextDisabled
+              !isEditMode && styles.saveButtonTextDisabled,
+              { fontSize: buttonFontSize }
             ]}>GUARDAR REPORTE</Text>
           </TouchableOpacity>
         </View>
@@ -184,6 +192,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  productListContent: {
+    paddingBottom: 20,
   },
   footer: {
     padding: 20,
