@@ -37,7 +37,7 @@ export function ProductModal({
   onSave,
 }: ProductModalProps) {
   return (
-    <ModalWrapper visible={visible} width="90%">
+    <ModalWrapper visible={visible} width="90%" avoidKeyboard>
       <Text style={styles.modalTitle}>
         {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
       </Text>
