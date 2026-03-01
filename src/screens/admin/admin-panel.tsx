@@ -37,6 +37,12 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
           onPress={() => router.navigate('/catalog')}
         />
         <MenuItem
+          icon="🏷️"
+          title="Categorías"
+          description="Organizar productos por tipo"
+          onPress={() => router.navigate('/categories')}
+        />
+        <MenuItem
           icon="📊"
           title="Historial de Reportes"
           description="Ver y exportar reportes guardados"

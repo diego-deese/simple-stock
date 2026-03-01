@@ -20,6 +20,15 @@ export function CatalogItem({ item, onEdit, onDelete }: CatalogItemProps) {
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productUnit}>Unidad: {item.unit}</Text>
+        {item.category_name ? (
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{item.category_name}</Text>
+          </View>
+        ) : (
+          <View style={[styles.categoryBadge, styles.categoryBadgeOther]}>
+            <Text style={[styles.categoryText, styles.categoryTextOther]}>Sin categoría</Text>
+          </View>
+        )}
       </View>
       
       <View style={styles.productActions}>
@@ -70,6 +79,25 @@ const styles = StyleSheet.create({
   productUnit: {
     fontSize: 16,
     color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primaryLight,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  categoryBadgeOther: {
+    backgroundColor: colors.backgroundDark,
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  categoryTextOther: {
+    color: colors.textMuted,
   },
   productActions: {
     flexDirection: 'row',

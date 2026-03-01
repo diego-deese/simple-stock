@@ -8,24 +8,22 @@ import {
 import { router } from 'expo-router';
 import { useApp } from '@context/AppContext';
 import { useAuth } from '@context/AuthContext';
-import { Product } from '@app-types/index';
+import { Category } from '@app-types/index';
 import { colors } from '@theme/colors';
-import { CatalogItem } from './catalog-item';
-import { ProductModal } from './product-modal';
+import { CategoryItem } from './category-item';
+import { CategoryModal } from './category-modal';
 import AccessibleButton from '@components/AccessibleButton';
 import LoadingScreen from '@components/LoadingScreen';
 import ScreenHeader from '@components/ScreenHeader';
 import EmptyState from '@components/EmptyState';
 
-export function Catalog() {
+export function Categories() {
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { products, categories, addProduct, updateProduct, deleteProduct, loading } = useApp();
+  const { categories, addCategory, updateCategory, deleteCategory, loading } = useApp();
   
   const [showModal, setShowModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [productName, setProductName] = useState('');
-  const [productUnit, setProductUnit] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryName, setCategoryName] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -35,63 +33,53 @@ export function Catalog() {
   }, [isAuthenticated, authLoading]);
 
   const openAddModal = () => {
-    setEditingProduct(null);
-    setProductName('');
-    setProductUnit('kg');
-    setSelectedCategoryId(null);
+    setEditingCategory(null);
+    setCategoryName('');
     setShowModal(true);
   };
 
-  const openEditModal = (product: Product) => {
-    setEditingProduct(product);
-    setProductName(product.name);
-    setProductUnit(product.unit);
-    setSelectedCategoryId(product.category_id);
+  const openEditModal = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryName(category.name);
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setEditingProduct(null);
-    setProductName('');
-    setProductUnit('');
-    setSelectedCategoryId(null);
+    setEditingCategory(null);
+    setCategoryName('');
   };
 
   const handleSave = async () => {
-    if (!productName.trim()) {
-      Alert.alert('Error', 'El nombre del producto es requerido');
-      return;
-    }
-
-    if (!productUnit.trim()) {
-      Alert.alert('Error', 'La unidad de medida es requerida');
+    if (!categoryName.trim()) {
+      Alert.alert('Error', 'El nombre de la categoría es requerido');
       return;
     }
 
     try {
       setSaving(true);
       
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, productName.trim(), productUnit.trim(), selectedCategoryId);
-        Alert.alert('Éxito', 'Producto actualizado correctamente');
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, categoryName.trim());
+        Alert.alert('Éxito', 'Categoría actualizada correctamente');
       } else {
-        await addProduct(productName.trim(), productUnit.trim(), selectedCategoryId);
-        Alert.alert('Éxito', 'Producto agregado correctamente');
+        await addCategory(categoryName.trim());
+        Alert.alert('Éxito', 'Categoría agregada correctamente');
       }
       
       closeModal();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo guardar el producto');
+      const message = error instanceof Error ? error.message : 'No se pudo guardar la categoría';
+      Alert.alert('Error', message);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = (product: Product) => {
+  const handleDelete = (category: Category) => {
     Alert.alert(
       'Confirmar eliminación',
-      `¿Estás seguro de que quieres eliminar "${product.name}"? Esta acción no se puede deshacer.`,
+      `¿Estás seguro de que quieres eliminar "${category.name}"?\n\nLos productos de esta categoría pasarán a "Otros".`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -99,10 +87,10 @@ export function Catalog() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteProduct(product.id);
-              Alert.alert('Éxito', 'Producto eliminado correctamente');
+              await deleteCategory(category.id);
+              Alert.alert('Éxito', 'Categoría eliminada correctamente');
             } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar el producto');
+              Alert.alert('Error', 'No se pudo eliminar la categoría');
             }
           }
         }
@@ -111,7 +99,7 @@ export function Catalog() {
   };
 
   if (loading || authLoading) {
-    return <LoadingScreen message="Cargando catálogo..." />;
+    return <LoadingScreen message="Cargando categorías..." />;
   }
 
   if (!isAuthenticated) {
@@ -121,8 +109,8 @@ export function Catalog() {
   return (
     <View style={styles.container}>
       <ScreenHeader
-        title="Gestión de Catálogo"
-        subtitle="Administra los productos del inventario"
+        title="Gestión de Categorías"
+        subtitle="Organiza los productos por tipo"
         backgroundColor={colors.secondary}
         showBackButton
         backRoute="/admin"
@@ -130,45 +118,41 @@ export function Catalog() {
 
       <View style={styles.content}>
         <AccessibleButton
-          title="+ AGREGAR PRODUCTO"
+          title="+ AGREGAR CATEGORÍA"
           onPress={openAddModal}
           variant="success"
           style={styles.addButton}
         />
 
         <FlatList
-          data={products.filter(p => p.active)}
+          data={categories}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <CatalogItem
+            <CategoryItem
               item={item}
               onEdit={openEditModal}
               onDelete={handleDelete}
             />
           )}
-          style={styles.productList}
+          style={styles.categoryList}
+          contentContainerStyle={styles.categoryListContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <EmptyState
-              message="No hay productos registrados"
-              hint="Toca 'AGREGAR PRODUCTO' para comenzar"
+              message="No hay categorías registradas"
+              hint="Toca 'AGREGAR CATEGORÍA' para comenzar"
               style={styles.emptyContainer}
             />
           }
         />
       </View>
 
-      <ProductModal
+      <CategoryModal
         visible={showModal}
-        editingProduct={editingProduct}
-        productName={productName}
-        productUnit={productUnit}
-        selectedCategoryId={selectedCategoryId}
-        categories={categories}
+        editingCategory={editingCategory}
+        categoryName={categoryName}
         saving={saving}
-        onNameChange={setProductName}
-        onUnitChange={setProductUnit}
-        onCategoryChange={setSelectedCategoryId}
+        onNameChange={setCategoryName}
         onCancel={closeModal}
         onSave={handleSave}
       />
@@ -189,8 +173,12 @@ const styles = StyleSheet.create({
   addButton: {
     marginBottom: 20,
   },
-  productList: {
+  categoryList: {
     flex: 1,
+  },
+  categoryListContent: {
+    paddingHorizontal: 4,
+    paddingBottom: 20,
   },
   emptyContainer: {
     marginTop: 60,
