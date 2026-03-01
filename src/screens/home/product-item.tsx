@@ -12,6 +12,7 @@ import { colors } from '@theme/colors';
 export interface ProductItemProps {
   item: Product;
   quantity: number;
+  isEditMode: boolean;
   onDecrement: () => void;
   onIncrement: () => void;
   onQuantityChange: (value: number) => void;
@@ -20,7 +21,8 @@ export interface ProductItemProps {
 // Usar memo para evitar re-renders innecesarios cuando las props no cambian
 export const ProductItem = memo(function ProductItem({ 
   item, 
-  quantity, 
+  quantity,
+  isEditMode,
   onDecrement, 
   onIncrement, 
   onQuantityChange 
@@ -52,14 +54,19 @@ export const ProductItem = memo(function ProductItem({
 
       <View style={styles.quantityContainer}>
         <TouchableOpacity
-          style={[styles.quantityButton, styles.decreaseButton]}
+          style={[
+            styles.quantityButton, 
+            styles.decreaseButton,
+            !isEditMode && styles.buttonDisabled
+          ]}
           onPress={onDecrement}
+          disabled={!isEditMode}
         >
-          <Text style={styles.buttonText}>−</Text>
+          <Text style={[styles.buttonText, !isEditMode && styles.buttonTextDisabled]}>−</Text>
         </TouchableOpacity>
 
         <TextInput
-          style={styles.quantityInput}
+          style={[styles.quantityInput, !isEditMode && styles.inputDisabled]}
           value={inputText}
           onChangeText={handleChangeText}
           onEndEditing={commitValue}
@@ -69,13 +76,19 @@ export const ProductItem = memo(function ProductItem({
           selectTextOnFocus
           maxLength={6}
           textAlign="center"
+          editable={isEditMode}
         />
 
         <TouchableOpacity
-          style={[styles.quantityButton, styles.increaseButton]}
+          style={[
+            styles.quantityButton, 
+            styles.increaseButton,
+            !isEditMode && styles.buttonDisabled
+          ]}
           onPress={onIncrement}
+          disabled={!isEditMode}
         >
-          <Text style={styles.buttonText}>+</Text>
+          <Text style={[styles.buttonText, !isEditMode && styles.buttonTextDisabled]}>+</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -135,6 +148,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.textLight,
   },
+  buttonDisabled: {
+    backgroundColor: colors.border,
+    opacity: 0.5,
+  },
+  buttonTextDisabled: {
+    color: colors.textSecondary,
+  },
   quantityInput: {
     minWidth: 80,
     height: 60,
@@ -148,5 +168,8 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     paddingHorizontal: 4,
     textAlignVertical: 'center',
+  },
+  inputDisabled: {
+    opacity: 0.6,
   },
 });

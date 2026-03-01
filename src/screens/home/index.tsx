@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useApp } from '@context/AppContext';
 import { Product } from '@app-types/index';
@@ -18,6 +19,11 @@ export function Home() {
   const { products, tempCounts, updateTempCount, saveReport, loading } = useApp();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const { width } = useWindowDimensions();
+  
+  // Ajustar tamaño de fuente según ancho de pantalla
+  const buttonFontSize = width < 420 ? 16 : 18;
 
   // Memoizar el mapa de cantidades para evitar recálculos innecesarios
   const quantityMap = useMemo(() => {
@@ -68,12 +74,13 @@ export function Home() {
       <ProductItem
         item={item}
         quantity={quantity}
+        isEditMode={isEditMode}
         onDecrement={() => updateTempCount(item.name, Math.max(0, quantity - 1))}
         onIncrement={() => updateTempCount(item.name, quantity + 1)}
         onQuantityChange={(value) => updateTempCount(item.name, value)}
       />
     );
-  }, [quantityMap, updateTempCount]);
+  }, [quantityMap, updateTempCount, isEditMode]);
 
   if (loading) {
     return (
@@ -98,17 +105,44 @@ export function Home() {
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderProductItem}
         style={styles.productList}
+        contentContainerStyle={styles.productListContent}
         showsVerticalScrollIndicator={false}
         extraData={quantityMap}
       />
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={() => setShowConfirmModal(true)}
-        >
-          <Text style={styles.saveButtonText}>GUARDAR REPORTE</Text>
-        </TouchableOpacity>
+        <View style={styles.footerButtons}>
+          <TouchableOpacity
+            style={[
+              styles.editButton,
+              isEditMode && styles.editButtonActive
+            ]}
+            onPress={() => setIsEditMode(!isEditMode)}
+          >
+            <Text style={[
+              styles.editButtonText,
+              isEditMode && styles.editButtonTextActive,
+              { fontSize: buttonFontSize }
+            ]}>
+              {isEditMode ? 'CANCELAR' : 'EDITAR'}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              !isEditMode && styles.saveButtonDisabled
+            ]}
+            onPress={() => setShowConfirmModal(true)}
+            disabled={!isEditMode}
+          >
+            <Text style={[
+              styles.saveButtonText,
+              !isEditMode && styles.saveButtonTextDisabled,
+              { fontSize: buttonFontSize }
+            ]}>GUARDAR REPORTE</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ConfirmationModal
@@ -159,22 +193,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
   },
+  productListContent: {
+    paddingBottom: 20,
+  },
   footer: {
     padding: 20,
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  footerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: colors.backgroundDark,
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  editButtonActive: {
+    backgroundColor: colors.warning,
+    borderColor: colors.warning,
+  },
+  editButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.textSecondary,
+  },
+  editButtonTextActive: {
+    color: colors.textLight,
+  },
   saveButton: {
+    flex: 2,
     backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 18,
     paddingHorizontal: 24,
     alignItems: 'center',
   },
+  saveButtonDisabled: {
+    backgroundColor: colors.border,
+    opacity: 0.6,
+  },
   saveButtonText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: colors.textLight,
+  },
+  saveButtonTextDisabled: {
+    color: colors.textSecondary,
   },
 });
