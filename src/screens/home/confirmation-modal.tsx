@@ -4,12 +4,11 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   Modal,
-  ActivityIndicator,
 } from 'react-native';
 import { TempCount } from '@app-types/index';
 import { colors } from '@theme/colors';
+import AccessibleButton from '@components/AccessibleButton';
 
 interface ConfirmationModalProps {
   visible: boolean;
@@ -55,25 +54,21 @@ export function ConfirmationModal({
           />
           
           <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
+            <AccessibleButton
+              title="Cancelar"
               onPress={onCancel}
               disabled={saving}
-            >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
+              variant="secondary"
+              style={styles.modalButton}
+            />
             
-            <TouchableOpacity
-              style={[styles.modalButton, styles.confirmButton]}
+            <AccessibleButton
+              title="Guardar"
               onPress={onConfirm}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.confirmButtonText}>Guardar</Text>
-              )}
-            </TouchableOpacity>
+              loading={saving}
+              variant="primary"
+              style={styles.modalButton}
+            />
           </View>
         </View>
       </View>
@@ -132,30 +127,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 24,
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 6,
-  },
-  cancelButton: {
-    backgroundColor: colors.backgroundDark,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  confirmButton: {
-    backgroundColor: colors.primary,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textLight,
   },
 });
