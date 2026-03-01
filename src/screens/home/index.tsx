@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,16 +19,12 @@ export function Home() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
 
-  const getCurrentQuantity = (productName: string): number => {
-    const tempCount = tempCounts.find(count => count.product_name === productName);
-    return tempCount ? tempCount.quantity : 0;
-  };
-
-  const updateQuantity = (productName: string, change: number) => {
-    const currentQuantity = getCurrentQuantity(productName);
-    const newQuantity = Math.max(0, currentQuantity + change);
-    updateTempCount(productName, newQuantity);
-  };
+  // Memoizar el mapa de cantidades para evitar recálculos innecesarios
+  const quantityMap = useMemo(() => {
+    const map = new Map<string, number>();
+    tempCounts.forEach(count => map.set(count.product_name, count.quantity));
+    return map;
+  }, [tempCounts]);
 
   const handleSaveReport = async () => {
     try {
@@ -65,18 +61,19 @@ export function Home() {
     }
   };
 
-  const renderProductItem = ({ item }: { item: Product }) => {
-    const quantity = getCurrentQuantity(item.name);
+  // Usar useCallback para evitar recrear la función en cada render
+  const renderProductItem = useCallback(({ item }: { item: Product }) => {
+    const quantity = quantityMap.get(item.name) || 0;
     return (
       <ProductItem
         item={item}
         quantity={quantity}
-        onDecrement={() => updateQuantity(item.name, -1)}
-        onIncrement={() => updateQuantity(item.name, 1)}
+        onDecrement={() => updateTempCount(item.name, Math.max(0, quantity - 1))}
+        onIncrement={() => updateTempCount(item.name, quantity + 1)}
         onQuantityChange={(value) => updateTempCount(item.name, value)}
       />
     );
-  };
+  }, [quantityMap, updateTempCount]);
 
   if (loading) {
     return (
@@ -102,6 +99,7 @@ export function Home() {
         renderItem={renderProductItem}
         style={styles.productList}
         showsVerticalScrollIndicator={false}
+        extraData={quantityMap}
       />
 
       <View style={styles.footer}>

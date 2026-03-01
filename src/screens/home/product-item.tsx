@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 import { Product } from '@app-types/index';
 import { colors } from '@theme/colors';
 
-interface ProductItemProps {
+export interface ProductItemProps {
   item: Product;
   quantity: number;
   onDecrement: () => void;
@@ -17,7 +17,14 @@ interface ProductItemProps {
   onQuantityChange: (value: number) => void;
 }
 
-export function ProductItem({ item, quantity, onDecrement, onIncrement, onQuantityChange }: ProductItemProps) {
+// Usar memo para evitar re-renders innecesarios cuando las props no cambian
+export const ProductItem = memo(function ProductItem({ 
+  item, 
+  quantity, 
+  onDecrement, 
+  onIncrement, 
+  onQuantityChange 
+}: ProductItemProps) {
   const [inputText, setInputText] = useState(String(quantity));
 
   useEffect(() => {
@@ -52,7 +59,7 @@ export function ProductItem({ item, quantity, onDecrement, onIncrement, onQuanti
         </TouchableOpacity>
 
         <TextInput
-          style={styles.quantityDisplay}
+          style={styles.quantityInput}
           value={inputText}
           onChangeText={handleChangeText}
           onEndEditing={commitValue}
@@ -73,7 +80,7 @@ export function ProductItem({ item, quantity, onDecrement, onIncrement, onQuanti
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   productItem: {
@@ -128,7 +135,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.textLight,
   },
-  quantityDisplay: {
+  quantityInput: {
     minWidth: 80,
     height: 60,
     backgroundColor: colors.backgroundDark,
