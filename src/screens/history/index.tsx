@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '@context/AppContext';
@@ -16,6 +13,9 @@ import { Report, ReportDetail } from '@app-types/index';
 import { colors } from '@theme/colors';
 import { ReportItem } from './report-item';
 import { ReportDetailsModal } from './report-details-modal';
+import LoadingScreen from '@components/LoadingScreen';
+import ScreenHeader from '@components/ScreenHeader';
+import EmptyState from '@components/EmptyState';
 
 export function History() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -94,36 +94,22 @@ export function History() {
   };
 
   if (loading || authLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Cargando reportes...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Cargando reportes..." />;
   }
 
   if (!isAuthenticated) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.navigate('/admin')}
-        >
-          <Text style={styles.backButtonText}>← Volver</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Historial de Reportes</Text>
-        <Text style={styles.headerSubtitle}>
-          {reports.length} reporte{reports.length !== 1 ? 's' : ''} guardado{reports.length !== 1 ? 's' : ''}
-        </Text>
-      </View>
+      <ScreenHeader
+        title="Historial de Reportes"
+        subtitle={`${reports.length} reporte${reports.length !== 1 ? 's' : ''} guardado${reports.length !== 1 ? 's' : ''}`}
+        backgroundColor={colors.primaryDark}
+        showBackButton
+        backRoute="/admin"
+      />
 
       <FlatList
         data={reports}
@@ -140,12 +126,11 @@ export function History() {
         style={styles.reportList}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No hay reportes guardados</Text>
-            <Text style={styles.emptySubtext}>
-              Los reportes aparecerán aquí después de guardarlos
-            </Text>
-          </View>
+          <EmptyState
+            message="No hay reportes guardados"
+            hint="Los reportes aparecerán aquí después de guardarlos"
+            style={styles.emptyContainer}
+          />
         }
       />
 
@@ -168,58 +153,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 18,
-    color: colors.textSecondary,
-  },
-  header: {
-    backgroundColor: colors.primaryDark,
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  backButton: {
-    marginBottom: 12,
-  },
-  backButtonText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textLight,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
   reportList: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
   },
   emptyContainer: {
-    alignItems: 'center',
     marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
 });

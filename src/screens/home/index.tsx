@@ -1,29 +1,24 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   Alert,
-  ActivityIndicator,
-  useWindowDimensions,
 } from 'react-native';
 import { useApp } from '@context/AppContext';
 import { Product } from '@app-types/index';
 import { colors } from '@theme/colors';
 import { ProductItem } from './product-item';
 import { ConfirmationModal } from './confirmation-modal';
+import AccessibleButton from '@components/AccessibleButton';
+import LoadingScreen from '@components/LoadingScreen';
+import ScreenHeader from '@components/ScreenHeader';
 
 export function Home() {
   const { products, tempCounts, updateTempCount, saveReport, loading } = useApp();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const { width } = useWindowDimensions();
-  
-  // Ajustar tamaño de fuente según ancho de pantalla
-  const buttonFontSize = width < 420 ? 16 : 18;
 
   // Memoizar el mapa de cantidades para evitar recálculos innecesarios
   const quantityMap = useMemo(() => {
@@ -83,22 +78,16 @@ export function Home() {
   }, [quantityMap, updateTempCount, isEditMode]);
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Cargando productos...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Cargando productos..." />;
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Registro Mensual</Text>
-        <Text style={styles.headerSubtitle}>
-          Registra las cantidades recibidas
-        </Text>
-      </View>
+      <ScreenHeader
+        title="Registro Mensual"
+        subtitle="Registra las cantidades recibidas"
+        backgroundColor={colors.primary}
+      />
 
       <FlatList
         data={products}
@@ -112,36 +101,22 @@ export function Home() {
 
       <View style={styles.footer}>
         <View style={styles.footerButtons}>
-          <TouchableOpacity
-            style={[
-              styles.editButton,
-              isEditMode && styles.editButtonActive
-            ]}
+          <AccessibleButton
+            title={isEditMode ? 'CANCELAR' : 'EDITAR'}
             onPress={() => setIsEditMode(!isEditMode)}
-          >
-            <Text style={[
-              styles.editButtonText,
-              isEditMode && styles.editButtonTextActive,
-              { fontSize: buttonFontSize }
-            ]}>
-              {isEditMode ? 'CANCELAR' : 'EDITAR'}
-            </Text>
-          </TouchableOpacity>
+            variant={isEditMode ? 'danger' : 'secondary'}
+            style={styles.editButton}
+            responsiveText
+          />
           
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              !isEditMode && styles.saveButtonDisabled
-            ]}
+          <AccessibleButton
+            title="GUARDAR REPORTE"
             onPress={() => setShowConfirmModal(true)}
             disabled={!isEditMode}
-          >
-            <Text style={[
-              styles.saveButtonText,
-              !isEditMode && styles.saveButtonTextDisabled,
-              { fontSize: buttonFontSize }
-            ]}>GUARDAR REPORTE</Text>
-          </TouchableOpacity>
+            variant="primary"
+            style={styles.saveButton}
+            responsiveText
+          />
         </View>
       </View>
 
@@ -160,33 +135,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 18,
-    color: colors.textSecondary,
-  },
-  header: {
-    backgroundColor: colors.primary,
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textLight,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
   },
   productList: {
     flex: 1,
@@ -208,44 +156,8 @@ const styles = StyleSheet.create({
   },
   editButton: {
     flex: 1,
-    backgroundColor: colors.backgroundDark,
-    borderRadius: 12,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  editButtonActive: {
-    backgroundColor: colors.warning,
-    borderColor: colors.warning,
-  },
-  editButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textSecondary,
-  },
-  editButtonTextActive: {
-    color: colors.textLight,
   },
   saveButton: {
     flex: 2,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 18,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    backgroundColor: colors.border,
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textLight,
-  },
-  saveButtonTextDisabled: {
-    color: colors.textSecondary,
   },
 });

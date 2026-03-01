@@ -1,5 +1,6 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { colors } from '@theme/colors';
 
 interface AccessibleButtonProps {
   title: string;
@@ -8,6 +9,8 @@ interface AccessibleButtonProps {
   textStyle?: TextStyle;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'danger' | 'success';
+  responsiveText?: boolean;
+  loading?: boolean;
 }
 
 export default function AccessibleButton({
@@ -16,8 +19,14 @@ export default function AccessibleButton({
   style,
   textStyle,
   disabled = false,
-  variant = 'primary'
+  variant = 'primary',
+  responsiveText = false,
+  loading = false
 }: AccessibleButtonProps) {
+  const { width } = useWindowDimensions();
+  const fontSize = responsiveText && width < 420 ? 16 : 18;
+  const isDisabled = disabled || loading;
+
   const getVariantStyle = () => {
     switch (variant) {
       case 'secondary':
@@ -43,28 +52,37 @@ export default function AccessibleButton({
     }
   };
 
+  const getLoadingColor = () => {
+    return variant === 'secondary' ? colors.textSecondary : colors.textLight;
+  };
+
   return (
     <TouchableOpacity
       style={[
         styles.baseButton,
         getVariantStyle(),
-        disabled && styles.disabledButton,
+        isDisabled && styles.disabledButton,
         style
       ]}
       onPress={onPress}
-      disabled={disabled}
+      disabled={isDisabled}
       accessible={true}
       accessibilityLabel={title}
       accessibilityRole="button"
     >
-      <Text style={[
-        styles.baseText,
-        getVariantTextStyle(),
-        disabled && styles.disabledText,
-        textStyle
-      ]}>
-        {title}
-      </Text>
+      {loading ? (
+        <ActivityIndicator color={getLoadingColor()} />
+      ) : (
+        <Text style={[
+          styles.baseText,
+          getVariantTextStyle(),
+          isDisabled && styles.disabledText,
+          { fontSize },
+          textStyle
+        ]}>
+          {title}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -73,35 +91,35 @@ const styles = StyleSheet.create({
   baseButton: {
     borderRadius: 12,
     paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56, // Altura mínima para accesibilidad
   },
   baseText: {
-    fontSize: 18, // Fuente > 18px según especificaciones
+    fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   primaryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.backgroundDark,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: colors.border,
   },
   dangerButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: colors.error,
   },
   successButton: {
-    backgroundColor: '#28a745',
+    backgroundColor: colors.success,
   },
   primaryButtonText: {
-    color: 'white',
+    color: colors.textLight,
   },
   secondaryButtonText: {
-    color: '#6c757d',
+    color: colors.textSecondary,
   },
   disabledButton: {
     opacity: 0.5,

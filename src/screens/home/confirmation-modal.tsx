@@ -4,12 +4,11 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
-  Modal,
-  ActivityIndicator,
 } from 'react-native';
 import { TempCount } from '@app-types/index';
 import { colors } from '@theme/colors';
+import AccessibleButton from '@components/AccessibleButton';
+import ModalWrapper from '@components/ModalWrapper';
 
 interface ConfirmationModalProps {
   visible: boolean;
@@ -29,72 +28,47 @@ export function ConfirmationModal({
   const countsToShow = tempCounts.filter(count => count.quantity > 0);
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Confirmar Reporte</Text>
-          
-          <Text style={styles.modalSubtitle}>
-            Se registrarán los siguientes productos:
-          </Text>
-          
-          <FlatList
-            data={countsToShow}
-            keyExtractor={(item) => item.product_name}
-            style={styles.modalList}
-            renderItem={({ item }) => (
-              <View style={styles.modalItem}>
-                <Text style={styles.modalItemName}>{item.product_name}</Text>
-                <Text style={styles.modalItemQuantity}>{item.quantity}</Text>
-              </View>
-            )}
-          />
-          
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={onCancel}
-              disabled={saving}
-            >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.modalButton, styles.confirmButton]}
-              onPress={onConfirm}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.confirmButtonText}>Guardar</Text>
-              )}
-            </TouchableOpacity>
+    <ModalWrapper visible={visible} maxHeight="70%">
+      <Text style={styles.modalTitle}>Confirmar Reporte</Text>
+      
+      <Text style={styles.modalSubtitle}>
+        Se registrarán los siguientes productos:
+      </Text>
+      
+      <FlatList
+        data={countsToShow}
+        keyExtractor={(item) => item.product_name}
+        style={styles.modalList}
+        renderItem={({ item }) => (
+          <View style={styles.modalItem}>
+            <Text style={styles.modalItemName}>{item.product_name}</Text>
+            <Text style={styles.modalItemQuantity}>{item.quantity}</Text>
           </View>
-        </View>
+        )}
+      />
+      
+      <View style={styles.modalButtons}>
+        <AccessibleButton
+          title="Cancelar"
+          onPress={onCancel}
+          disabled={saving}
+          variant="secondary"
+          style={styles.modalButton}
+        />
+        
+        <AccessibleButton
+          title="Guardar"
+          onPress={onConfirm}
+          loading={saving}
+          variant="primary"
+          style={styles.modalButton}
+        />
       </View>
-    </Modal>
+    </ModalWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 24,
-    width: '85%',
-    maxHeight: '70%',
-  },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -132,30 +106,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 24,
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 6,
-  },
-  cancelButton: {
-    backgroundColor: colors.backgroundDark,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  confirmButton: {
-    backgroundColor: colors.primary,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textLight,
   },
 });

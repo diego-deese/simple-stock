@@ -1,15 +1,16 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { Product } from '@app-types/index';
 import { colors } from '@theme/colors';
+import AccessibleButton from '@components/AccessibleButton';
+import ModalWrapper from '@components/ModalWrapper';
+import FormInput from '@components/FormInput';
 
 const COMMON_UNITS = ['kg', 'litros', 'bultos', 'cajas', 'latas', 'paquetes', 'unidades'];
 
@@ -36,104 +37,87 @@ export function ProductModal({
   onCancel,
   onSave,
 }: ProductModalProps) {
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
-          </Text>
-          
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Nombre del producto *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={productName}
-              onChangeText={onNameChange}
-              placeholder="Ej: Arroz, Frijoles, etc."
-              placeholderTextColor="#999"
-            />
-          </View>
+  const unitRef = useRef<TextInput>(null);
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Unidad de medida *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={productUnit}
-              onChangeText={onUnitChange}
-              placeholder="Ej: kg, litros, bultos"
-              placeholderTextColor="#999"
-            />
-            
-            <Text style={styles.unitsLabel}>Unidades comunes:</Text>
-            <View style={styles.unitsContainer}>
-              {COMMON_UNITS.map((unit) => (
-                <TouchableOpacity
-                  key={unit}
-                  style={[
-                    styles.unitButton,
-                    productUnit === unit && styles.unitButtonSelected
-                  ]}
-                  onPress={() => onUnitChange(unit)}
-                >
-                  <Text style={[
-                    styles.unitButtonText,
-                    productUnit === unit && styles.unitButtonTextSelected
-                  ]}>
-                    {unit}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          
-          <View style={styles.modalButtons}>
+  return (
+    <ModalWrapper visible={visible} width="90%" avoidKeyboard>
+      <Text style={styles.modalTitle}>
+        {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
+      </Text>
+      
+      <FormInput
+        label="Nombre del producto"
+        required
+        value={productName}
+        onChangeText={onNameChange}
+        placeholder="Ej: Arroz, Frijoles, etc."
+        style={styles.textInput}
+        returnKeyType="next"
+        onSubmitEditing={() => unitRef.current?.focus()}
+        blurOnSubmit={false}
+      />
+
+      <View style={styles.formGroup}>
+        <FormInput
+          ref={unitRef}
+          label="Unidad de medida"
+          required
+          value={productUnit}
+          onChangeText={onUnitChange}
+          placeholder="Ej: kg, litros, bultos"
+          style={styles.textInput}
+          containerStyle={styles.unitInputContainer}
+          returnKeyType="done"
+          onSubmitEditing={onSave}
+        />
+        
+        <Text style={styles.unitsLabel}>Unidades comunes:</Text>
+        <View style={styles.unitsContainer}>
+          {COMMON_UNITS.map((unit) => (
             <TouchableOpacity
-              style={[styles.modalButton, styles.cancelButton]}
-              onPress={onCancel}
-              disabled={saving}
+              key={unit}
+              style={[
+                styles.unitButton,
+                productUnit === unit && styles.unitButtonSelected
+              ]}
+              onPress={() => onUnitChange(unit)}
             >
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
+              <Text style={[
+                styles.unitButtonText,
+                productUnit === unit && styles.unitButtonTextSelected
+              ]}>
+                {unit}
+              </Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.modalButton, styles.saveButton]}
-              onPress={onSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.saveButtonText}>
-                  {editingProduct ? 'Actualizar' : 'Agregar'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          ))}
         </View>
       </View>
-    </Modal>
+      
+      <View style={styles.modalButtons}>
+        <AccessibleButton
+          title="Cancelar"
+          onPress={onCancel}
+          variant="secondary"
+          disabled={saving}
+          style={styles.modalButton}
+          responsiveText
+        />
+        
+        <AccessibleButton
+          title={editingProduct ? 'Actualizar' : 'Agregar'}
+          onPress={onSave}
+          variant="primary"
+          disabled={saving}
+          loading={saving}
+          style={styles.modalButton}
+          responsiveText
+        />
+      </View>
+    </ModalWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 24,
-    width: '90%',
-    maxHeight: '80%',
-  },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -144,11 +128,8 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 20,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
+  unitInputContainer: {
+    marginBottom: 0,
   },
   textInput: {
     borderWidth: 1,
@@ -194,30 +175,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 24,
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 6,
-  },
-  cancelButton: {
-    backgroundColor: colors.backgroundDark,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textLight,
   },
 });
