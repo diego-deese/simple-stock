@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useReducer, useEffect, useState, ReactNode } from 'react';
-import { Product, Report, ReportDetail, TempCount, AppContextType, AppState, AppAction } from '@app-types/index';
+import React, { createContext, useContext, useReducer, useEffect, useState, useRef, ReactNode } from 'react';
+import { Product, Category, Report, ReportDetail, TempCount, AppContextType, AppState, AppAction } from '@app-types/index';
 import { initializeDatabase } from '@database/index';
-import { productService, reportService, exportService } from '@services/index';
+import { productService, categoryService, reportService, exportService } from '@services/index';
 
 // Estado inicial
 const initialState: AppState = {
   products: [],
+  categories: [],
   reports: [],
   tempCounts: [],
   loading: true,
@@ -23,6 +24,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'SET_PRODUCTS':
       return { ...state, products: action.payload };
+
+    case 'SET_CATEGORIES':
+      return { ...state, categories: action.payload };
 
     case 'SET_REPORTS':
       return { ...state, reports: action.payload };
@@ -68,9 +72,15 @@ interface AppProviderProps {
 export function AppProvider({ children }: AppProviderProps) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const [dbReady, setDbReady] = useState(false);
+  const initStarted = useRef(false);
 
   // Inicializar la base de datos al cargar la app
   useEffect(() => {
+    // Guard para evitar doble inicialización (React Strict Mode)
+    if (initStarted.current) {
+      return;
+    }
+    initStarted.current = true;
     initializeApp();
   }, []);
 
@@ -79,14 +89,18 @@ export function AppProvider({ children }: AppProviderProps) {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
 
-      // Inicializar base de datos (conexión + migraciones + seeds)
+      // 1. Inicializar base de datos (conexión + migraciones + seeds)
       await initializeDatabase();
-      
-      // Marcar la base de datos como lista
-      setDbReady(true);
+      console.log('[AppContext] Conexión establecida');
 
-      // Cargar datos iniciales en paralelo
-      await Promise.all([loadProducts(), loadReports(), loadTempCounts()]);
+      // 2. Cargar datos iniciales secuencialmente para evitar bloqueo de SQLite
+      await loadCategories();
+      await loadProducts();
+      await loadReports();
+      await loadTempCounts();
+
+      // 3. Marcar la base de datos como lista DESPUÉS de cargar los datos
+      setDbReady(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error al inicializar la aplicación';
       console.error('[AppContext] Error de inicialización:', message);
@@ -109,9 +123,9 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   };
 
-  const addProduct = async (name: string, unit: string) => {
+  const addProduct = async (name: string, unit: string, categoryId?: number | null) => {
     try {
-      await productService.createProduct(name, unit);
+      await productService.createProduct(name, unit, categoryId);
       await loadProducts(); // Recargar la lista
     } catch (error) {
       console.error('[AppContext] Error al agregar producto:', error);
@@ -119,9 +133,9 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   };
 
-  const updateProduct = async (id: number, name: string, unit: string) => {
+  const updateProduct = async (id: number, name: string, unit: string, categoryId?: number | null) => {
     try {
-      await productService.updateProduct(id, name, unit);
+      await productService.updateProduct(id, name, unit, categoryId);
       await loadProducts(); // Recargar la lista
     } catch (error) {
       console.error('[AppContext] Error al actualizar producto:', error);
@@ -135,6 +149,51 @@ export function AppProvider({ children }: AppProviderProps) {
       await loadProducts(); // Recargar la lista
     } catch (error) {
       console.error('[AppContext] Error al eliminar producto:', error);
+      throw error;
+    }
+  };
+
+  // ===========================================
+  // FUNCIONES PARA CATEGORÍAS
+  // ===========================================
+
+  const loadCategories = async () => {
+    try {
+      const categories = await categoryService.getActiveCategories();
+      dispatch({ type: 'SET_CATEGORIES', payload: categories });
+    } catch (error) {
+      console.error('[AppContext] Error al cargar categorías:', error);
+    }
+  };
+
+  const addCategory = async (name: string) => {
+    try {
+      await categoryService.createCategory(name);
+      await loadCategories(); // Recargar la lista
+    } catch (error) {
+      console.error('[AppContext] Error al agregar categoría:', error);
+      throw error;
+    }
+  };
+
+  const updateCategory = async (id: number, name: string) => {
+    try {
+      await categoryService.updateCategory(id, name);
+      await loadCategories(); // Recargar la lista
+    } catch (error) {
+      console.error('[AppContext] Error al actualizar categoría:', error);
+      throw error;
+    }
+  };
+
+  const deleteCategory = async (id: number) => {
+    try {
+      await categoryService.deactivateCategory(id);
+      // Recargar secuencialmente para evitar bloqueo de SQLite
+      await loadCategories();
+      await loadProducts();
+    } catch (error) {
+      console.error('[AppContext] Error al eliminar categoría:', error);
       throw error;
     }
   };
@@ -243,6 +302,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const contextValue: AppContextType = {
     // Estado
     products: state.products,
+    categories: state.categories,
     reports: state.reports,
     tempCounts: state.tempCounts,
     loading: state.loading,
@@ -254,6 +314,12 @@ export function AppProvider({ children }: AppProviderProps) {
     updateProduct,
     deleteProduct,
     loadProducts,
+
+    // Funciones para categorías
+    loadCategories,
+    addCategory,
+    updateCategory,
+    deleteCategory,
 
     // Funciones para reportes
     saveReport,
