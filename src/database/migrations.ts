@@ -90,6 +90,30 @@ const migrations: Migration[] = [
       );
     `,
   },
+  // Migración para agregar categorías de productos
+  {
+    version: 4,
+    name: 'create_categories_table',
+    up: `
+      -- Tabla de categorías de productos
+      CREATE TABLE IF NOT EXISTS categories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        sort_order INTEGER DEFAULT 0,
+        active INTEGER DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Agregar campo category_id a productos (nullable para "Otros")
+      ALTER TABLE products ADD COLUMN category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL;
+
+      -- Índice para mejorar consultas por categoría
+      CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
+      CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(active);
+      CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order);
+    `,
+  },
 ];
 
 /**

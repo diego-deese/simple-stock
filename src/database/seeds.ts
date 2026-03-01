@@ -5,10 +5,21 @@ import { dbConnection } from './connection';
  * Solo se ejecutan si las tablas están vacías.
  */
 
+interface CategorySeed {
+  name: string;
+  sort_order: number;
+}
+
 interface ProductSeed {
   name: string;
   unit: string;
 }
+
+// Categorías iniciales
+const initialCategories: CategorySeed[] = [
+  { name: 'Frutas y Verduras', sort_order: 1 },
+  { name: 'Carnes', sort_order: 2 },
+];
 
 // Productos iniciales de demostración
 const initialProducts: ProductSeed[] = [
@@ -43,6 +54,30 @@ class SeederManager {
   }
 
   /**
+   * Siembra las categorías iniciales.
+   */
+  async seedCategories(): Promise<void> {
+    const db = dbConnection.getDatabase();
+    
+    const hasCategories = await this.tableHasData('categories');
+    if (hasCategories) {
+      console.log('[Seeds] Categorías ya existen, omitiendo seed');
+      return;
+    }
+
+    console.log('[Seeds] Insertando categorías iniciales...');
+
+    for (const category of initialCategories) {
+      await db.runAsync(
+        'INSERT INTO categories (name, sort_order, active) VALUES (?, ?, 1)',
+        [category.name, category.sort_order]
+      );
+    }
+
+    console.log(`[Seeds] ${initialCategories.length} categorías insertadas`);
+  }
+
+  /**
    * Siembra los productos iniciales.
    */
   async seedProducts(): Promise<void> {
@@ -72,6 +107,7 @@ class SeederManager {
   async runAllSeeds(): Promise<void> {
     console.log('[Seeds] Ejecutando seeds...');
     
+    await this.seedCategories();
     await this.seedProducts();
     // Agregar más seeds aquí si es necesario
     
@@ -92,6 +128,7 @@ class SeederManager {
       DELETE FROM reports;
       DELETE FROM temp_counts;
       DELETE FROM products;
+      DELETE FROM categories;
     `);
     
     console.log('[Seeds] Todos los datos eliminados');
@@ -112,4 +149,4 @@ class SeederManager {
 export const seederManager = new SeederManager();
 
 // Exportar datos iniciales para referencia
-export { initialProducts };
+export { initialProducts, initialCategories };
