@@ -4,9 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '@context/AppContext';
@@ -16,6 +14,8 @@ import { colors } from '@theme/colors';
 import { CatalogItem } from './catalog-item';
 import { ProductModal } from './product-modal';
 import AccessibleButton from '@components/AccessibleButton';
+import LoadingScreen from '@components/LoadingScreen';
+import ScreenHeader from '@components/ScreenHeader';
 
 export function Catalog() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -107,36 +107,22 @@ export function Catalog() {
   };
 
   if (loading || authLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Cargando catálogo...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Cargando catálogo..." />;
   }
 
   if (!isAuthenticated) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <LoadingScreen />;
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.navigate('/admin')}
-        >
-          <Text style={styles.backButtonText}>← Volver</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gestión de Catálogo</Text>
-        <Text style={styles.headerSubtitle}>
-          Administra los productos del inventario
-        </Text>
-      </View>
+      <ScreenHeader
+        title="Gestión de Catálogo"
+        subtitle="Administra los productos del inventario"
+        backgroundColor={colors.secondary}
+        showBackButton
+        backRoute="/admin"
+      />
 
       <View style={styles.content}>
         <AccessibleButton
@@ -188,41 +174,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 18,
-    color: colors.textSecondary,
-  },
-  header: {
-    backgroundColor: colors.secondary,
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  backButton: {
-    marginBottom: 12,
-  },
-  backButtonText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textLight,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
   },
   content: {
     flex: 1,

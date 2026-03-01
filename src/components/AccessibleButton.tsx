@@ -91,13 +91,13 @@ const styles = StyleSheet.create({
   baseButton: {
     borderRadius: 12,
     paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56, // Altura mínima para accesibilidad
   },
   baseText: {
-    fontSize: 18, // Fuente > 18px según especificaciones
+    fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
   },
