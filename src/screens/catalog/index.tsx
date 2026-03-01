@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   Alert,
@@ -16,6 +15,7 @@ import { ProductModal } from './product-modal';
 import AccessibleButton from '@components/AccessibleButton';
 import LoadingScreen from '@components/LoadingScreen';
 import ScreenHeader from '@components/ScreenHeader';
+import EmptyState from '@components/EmptyState';
 
 export function Catalog() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -145,12 +145,11 @@ export function Catalog() {
           style={styles.productList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No hay productos registrados</Text>
-              <Text style={styles.emptySubtext}>
-                Toca "AGREGAR PRODUCTO" para comenzar
-              </Text>
-            </View>
+            <EmptyState
+              message="No hay productos registrados"
+              hint="Toca 'AGREGAR PRODUCTO' para comenzar"
+              style={styles.emptyContainer}
+            />
           }
         />
       </View>
@@ -187,16 +186,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   emptyContainer: {
-    alignItems: 'center',
     marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: colors.textMuted,
   },
 });

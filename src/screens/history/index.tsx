@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   Alert,
@@ -16,6 +15,7 @@ import { ReportItem } from './report-item';
 import { ReportDetailsModal } from './report-details-modal';
 import LoadingScreen from '@components/LoadingScreen';
 import ScreenHeader from '@components/ScreenHeader';
+import EmptyState from '@components/EmptyState';
 
 export function History() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -126,12 +126,11 @@ export function History() {
         style={styles.reportList}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No hay reportes guardados</Text>
-            <Text style={styles.emptySubtext}>
-              Los reportes aparecerán aquí después de guardarlos
-            </Text>
-          </View>
+          <EmptyState
+            message="No hay reportes guardados"
+            hint="Los reportes aparecerán aquí después de guardarlos"
+            style={styles.emptyContainer}
+          />
         }
       />
 
@@ -160,17 +159,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   emptyContainer: {
-    alignItems: 'center',
     marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
 });
