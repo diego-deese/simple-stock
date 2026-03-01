@@ -1,11 +1,9 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useApp } from '@context/AppContext';
 import { Product } from '@app-types/index';
@@ -13,6 +11,8 @@ import { colors } from '@theme/colors';
 import { ProductItem } from './product-item';
 import { ConfirmationModal } from './confirmation-modal';
 import AccessibleButton from '@components/AccessibleButton';
+import LoadingScreen from '@components/LoadingScreen';
+import ScreenHeader from '@components/ScreenHeader';
 
 export function Home() {
   const { products, tempCounts, updateTempCount, saveReport, loading } = useApp();
@@ -78,22 +78,16 @@ export function Home() {
   }, [quantityMap, updateTempCount, isEditMode]);
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Cargando productos...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Cargando productos..." />;
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Registro Mensual</Text>
-        <Text style={styles.headerSubtitle}>
-          Registra las cantidades recibidas
-        </Text>
-      </View>
+      <ScreenHeader
+        title="Registro Mensual"
+        subtitle="Registra las cantidades recibidas"
+        backgroundColor={colors.primary}
+      />
 
       <FlatList
         data={products}
@@ -141,33 +135,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 18,
-    color: colors.textSecondary,
-  },
-  header: {
-    backgroundColor: colors.primary,
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textLight,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
   },
   productList: {
     flex: 1,

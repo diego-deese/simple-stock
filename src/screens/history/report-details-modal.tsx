@@ -5,11 +5,11 @@ import {
   StyleSheet,
   FlatList,
   Modal,
-  ActivityIndicator,
 } from 'react-native';
 import { Report, ReportDetail } from '@app-types/index';
 import { colors } from '@theme/colors';
 import AccessibleButton from '@components/AccessibleButton';
+import LoadingScreen from '@components/LoadingScreen';
 
 interface ReportDetailsModalProps {
   visible: boolean;
@@ -41,10 +41,7 @@ export function ReportDetailsModal({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           {loadingDetails ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Cargando detalles...</Text>
-            </View>
+            <LoadingScreen message="Cargando detalles..." fullScreen={false} />
           ) : (
             <>
               <View style={styles.modalHeader}>
@@ -98,16 +95,6 @@ export function ReportDetailsModal({
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 18,
-    color: colors.textSecondary,
-  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
