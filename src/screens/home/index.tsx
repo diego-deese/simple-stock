@@ -1,24 +1,48 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  FlatList,
+  SectionList,
   Alert,
 } from 'react-native';
 import { useApp } from '@context/AppContext';
-import { Product } from '@app-types/index';
+import { Product, ProductSection } from '@app-types/index';
 import { colors } from '@theme/colors';
 import { ProductItem } from './product-item';
+import { CategoryHeader } from './category-header';
 import { ConfirmationModal } from './confirmation-modal';
 import AccessibleButton from '@components/AccessibleButton';
 import LoadingScreen from '@components/LoadingScreen';
 import ScreenHeader from '@components/ScreenHeader';
+import EmptyState from '@components/EmptyState';
+import { productService } from '@services/index';
 
 export function Home() {
-  const { products, tempCounts, updateTempCount, saveReport, loading } = useApp();
+  const { tempCounts, updateTempCount, saveReport, loading, dbReady, products } = useApp();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [sections, setSections] = useState<ProductSection[]>([]);
+  const [loadingSections, setLoadingSections] = useState(true);
+
+  // Cargar productos agrupados por categoría cuando la DB esté lista o los productos cambien
+  useEffect(() => {
+    if (dbReady) {
+      loadGroupedProducts();
+    }
+  }, [dbReady, products]);
+
+  const loadGroupedProducts = async () => {
+    try {
+      setLoadingSections(true);
+      const groupedProducts = await productService.getActiveProductsGrouped();
+      setSections(groupedProducts);
+    } catch (error) {
+      console.error('[Home] Error al cargar productos agrupados:', error);
+    } finally {
+      setLoadingSections(false);
+    }
+  };
 
   // Memoizar el mapa de cantidades para evitar recálculos innecesarios
   const quantityMap = useMemo(() => {
@@ -62,7 +86,7 @@ export function Home() {
     }
   };
 
-  // Usar useCallback para evitar recrear la función en cada render
+  // Renderizar cada producto
   const renderProductItem = useCallback(({ item }: { item: Product }) => {
     const quantity = quantityMap.get(item.name) || 0;
     return (
@@ -77,9 +101,16 @@ export function Home() {
     );
   }, [quantityMap, updateTempCount, isEditMode]);
 
-  if (loading) {
+  // Renderizar header de categoría
+  const renderSectionHeader = useCallback(({ section }: { section: ProductSection }) => (
+    <CategoryHeader title={section.title} />
+  ), []);
+
+  if (loading || loadingSections) {
     return <LoadingScreen message="Cargando productos..." />;
   }
+
+  const hasProducts = sections.some(section => section.data.length > 0);
 
   return (
     <View style={styles.container}>
@@ -89,15 +120,23 @@ export function Home() {
         backgroundColor={colors.primary}
       />
 
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderProductItem}
-        style={styles.productList}
-        contentContainerStyle={styles.productListContent}
-        showsVerticalScrollIndicator={false}
-        extraData={quantityMap}
-      />
+      {hasProducts ? (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderProductItem}
+          renderSectionHeader={renderSectionHeader}
+          style={styles.productList}
+          contentContainerStyle={styles.productListContent}
+          showsVerticalScrollIndicator={false}
+          extraData={quantityMap}
+          stickySectionHeadersEnabled={false}
+        />
+      ) : (
+        <EmptyState
+          message="No hay productos registrados. Agrega productos desde el catálogo."
+        />
+      )}
 
       <View style={styles.footer}>
         <View style={styles.footerButtons}>
@@ -139,7 +178,7 @@ const styles = StyleSheet.create({
   productList: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 8,
   },
   productListContent: {
     paddingBottom: 20,
