@@ -4,12 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   TextInput,
 } from 'react-native';
 import { Product } from '@app-types/index';
 import { colors } from '@theme/colors';
 import AccessibleButton from '@components/AccessibleButton';
+import ModalWrapper from '@components/ModalWrapper';
 
 const COMMON_UNITS = ['kg', 'litros', 'bultos', 'cajas', 'latas', 'paquetes', 'unidades'];
 
@@ -37,100 +37,79 @@ export function ProductModal({
   onSave,
 }: ProductModalProps) {
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>
-            {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
-          </Text>
-          
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Nombre del producto *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={productName}
-              onChangeText={onNameChange}
-              placeholder="Ej: Arroz, Frijoles, etc."
-              placeholderTextColor="#999"
-            />
-          </View>
+    <ModalWrapper visible={visible} width="90%">
+      <Text style={styles.modalTitle}>
+        {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
+      </Text>
+      
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Nombre del producto *</Text>
+        <TextInput
+          style={styles.textInput}
+          value={productName}
+          onChangeText={onNameChange}
+          placeholder="Ej: Arroz, Frijoles, etc."
+          placeholderTextColor="#999"
+        />
+      </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Unidad de medida *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={productUnit}
-              onChangeText={onUnitChange}
-              placeholder="Ej: kg, litros, bultos"
-              placeholderTextColor="#999"
-            />
-            
-            <Text style={styles.unitsLabel}>Unidades comunes:</Text>
-            <View style={styles.unitsContainer}>
-              {COMMON_UNITS.map((unit) => (
-                <TouchableOpacity
-                  key={unit}
-                  style={[
-                    styles.unitButton,
-                    productUnit === unit && styles.unitButtonSelected
-                  ]}
-                  onPress={() => onUnitChange(unit)}
-                >
-                  <Text style={[
-                    styles.unitButtonText,
-                    productUnit === unit && styles.unitButtonTextSelected
-                  ]}>
-                    {unit}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          
-          <View style={styles.modalButtons}>
-            <AccessibleButton
-              title="Cancelar"
-              onPress={onCancel}
-              variant="secondary"
-              disabled={saving}
-              style={styles.modalButton}
-              responsiveText
-            />
-            
-            <AccessibleButton
-              title={editingProduct ? 'Actualizar' : 'Agregar'}
-              onPress={onSave}
-              variant="primary"
-              disabled={saving}
-              loading={saving}
-              style={styles.modalButton}
-              responsiveText
-            />
-          </View>
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Unidad de medida *</Text>
+        <TextInput
+          style={styles.textInput}
+          value={productUnit}
+          onChangeText={onUnitChange}
+          placeholder="Ej: kg, litros, bultos"
+          placeholderTextColor="#999"
+        />
+        
+        <Text style={styles.unitsLabel}>Unidades comunes:</Text>
+        <View style={styles.unitsContainer}>
+          {COMMON_UNITS.map((unit) => (
+            <TouchableOpacity
+              key={unit}
+              style={[
+                styles.unitButton,
+                productUnit === unit && styles.unitButtonSelected
+              ]}
+              onPress={() => onUnitChange(unit)}
+            >
+              <Text style={[
+                styles.unitButtonText,
+                productUnit === unit && styles.unitButtonTextSelected
+              ]}>
+                {unit}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
-    </Modal>
+      
+      <View style={styles.modalButtons}>
+        <AccessibleButton
+          title="Cancelar"
+          onPress={onCancel}
+          variant="secondary"
+          disabled={saving}
+          style={styles.modalButton}
+          responsiveText
+        />
+        
+        <AccessibleButton
+          title={editingProduct ? 'Actualizar' : 'Agregar'}
+          onPress={onSave}
+          variant="primary"
+          disabled={saving}
+          loading={saving}
+          style={styles.modalButton}
+          responsiveText
+        />
+      </View>
+    </ModalWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 24,
-    width: '90%',
-    maxHeight: '80%',
-  },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
