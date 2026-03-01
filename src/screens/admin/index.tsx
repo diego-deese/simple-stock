@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +15,8 @@ import { useAuth } from '@context/AuthContext';
 import { colors } from '@theme/colors';
 import { MenuItem } from './menu-item';
 import AccessibleButton from '@components/AccessibleButton';
+import LoadingScreen from '@components/LoadingScreen';
+import ScreenHeader from '@components/ScreenHeader';
 
 export function Admin() {
   const router = useRouter();
@@ -88,24 +89,22 @@ export function Admin() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Cargando...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Cargando..." />;
   }
 
   // Si está autenticado, mostrar el panel de admin
   if (isAuthenticated) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Panel de Admin</Text>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutButtonText}>Salir</Text>
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="Panel de Admin"
+          backgroundColor={colors.secondary}
+          rightComponent={
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+              <Text style={styles.logoutButtonText}>Salir</Text>
+            </TouchableOpacity>
+          }
+        />
 
         <View style={styles.menuContainer}>
           <MenuItem
@@ -133,10 +132,11 @@ export function Admin() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.formHeader}>
-            <Text style={styles.headerTitle}>Configurar Admin</Text>
-            <Text style={styles.headerSubtitle}>Primera vez: crea tus credenciales</Text>
-          </View>
+          <ScreenHeader
+            title="Configurar Admin"
+            subtitle="Primera vez: crea tus credenciales"
+            backgroundColor={colors.secondary}
+          />
 
           <View style={styles.formContainer}>
             <Text style={styles.label}>Usuario</Text>
@@ -189,10 +189,11 @@ export function Admin() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.formHeader}>
-          <Text style={styles.headerTitle}>Acceso Admin</Text>
-          <Text style={styles.headerSubtitle}>Ingresa tus credenciales</Text>
-        </View>
+        <ScreenHeader
+          title="Acceso Admin"
+          subtitle="Ingresa tus credenciales"
+          backgroundColor={colors.secondary}
+        />
 
         <View style={styles.formContainer}>
           <Text style={styles.label}>Usuario</Text>
@@ -234,44 +235,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 18,
-    color: colors.textSecondary,
-  },
   scrollContent: {
     flexGrow: 1,
-  },
-  header: {
-    backgroundColor: colors.secondary,
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  formHeader: {
-    backgroundColor: colors.secondary,
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textLight,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 4,
   },
   logoutButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
