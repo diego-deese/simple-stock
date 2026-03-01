@@ -3,6 +3,19 @@
 // ===========================================
 
 /**
+ * Categoría de productos.
+ * Permite agrupar productos en la pantalla de registro.
+ */
+export interface Category {
+  id: number;
+  name: string;
+  sort_order: number;
+  active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
  * Producto del inventario.
  * Los productos pueden ser desactivados (borrado lógico) para mantener
  * la integridad de los reportes históricos.
@@ -12,6 +25,8 @@ export interface Product {
   name: string;
   unit: string;
   active: boolean;
+  category_id: number | null;
+  category_name?: string; // Incluido en queries con JOIN
   created_at?: string;
   updated_at?: string;
 }
@@ -56,6 +71,7 @@ export interface TempCount {
 export interface CreateProductDTO {
   name: string;
   unit: string;
+  category_id?: number | null;
 }
 
 /**
@@ -65,6 +81,34 @@ export interface UpdateProductDTO {
   name?: string;
   unit?: string;
   active?: boolean;
+  category_id?: number | null;
+}
+
+/**
+ * DTO para crear una categoría.
+ */
+export interface CreateCategoryDTO {
+  name: string;
+  sort_order?: number;
+}
+
+/**
+ * DTO para actualizar una categoría.
+ */
+export interface UpdateCategoryDTO {
+  name?: string;
+  sort_order?: number;
+  active?: boolean;
+}
+
+/**
+ * Sección de productos agrupados por categoría.
+ * Usado para renderizar SectionList en la pantalla de registro.
+ */
+export interface ProductSection {
+  title: string;
+  categoryId: number | null;
+  data: Product[];
 }
 
 /**
@@ -134,6 +178,7 @@ export type RootStackParamList = {
  */
 export interface AppState {
   products: Product[];
+  categories: Category[];
   reports: Report[];
   tempCounts: TempCount[];
   loading: boolean;
@@ -147,6 +192,7 @@ export type AppAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_PRODUCTS'; payload: Product[] }
+  | { type: 'SET_CATEGORIES'; payload: Category[] }
   | { type: 'SET_REPORTS'; payload: Report[] }
   | { type: 'SET_TEMP_COUNTS'; payload: TempCount[] }
   | { type: 'UPDATE_TEMP_COUNT'; payload: TempCount }
@@ -159,6 +205,7 @@ export type AppAction =
 export interface AppContextType {
   // Estado
   products: Product[];
+  categories: Category[];
   reports: Report[];
   tempCounts: TempCount[];
   loading: boolean;
@@ -166,10 +213,16 @@ export interface AppContextType {
   dbReady: boolean; // Indica si la base de datos está inicializada
   
   // Funciones para productos
-  addProduct: (name: string, unit: string) => Promise<void>;
-  updateProduct: (id: number, name: string, unit: string) => Promise<void>;
+  addProduct: (name: string, unit: string, categoryId?: number | null) => Promise<void>;
+  updateProduct: (id: number, name: string, unit: string, categoryId?: number | null) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
   loadProducts: () => Promise<void>;
+  
+  // Funciones para categorías
+  loadCategories: () => Promise<void>;
+  addCategory: (name: string) => Promise<void>;
+  updateCategory: (id: number, name: string) => Promise<void>;
+  deleteCategory: (id: number) => Promise<void>;
   
   // Funciones para reportes
   saveReport: (tempCounts: TempCount[]) => Promise<void>;

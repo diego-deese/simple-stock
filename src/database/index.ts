@@ -5,11 +5,42 @@ export { dbConnection } from './connection';
 export { migrationManager, migrations } from './migrations';
 export { seederManager, initialProducts } from './seeds';
 
+// Lock para evitar inicializaciones concurrentes
+let initializationPromise: Promise<void> | null = null;
+let isInitialized = false;
+
 /**
  * Inicializa la base de datos completa.
  * Conecta, ejecuta migraciones y siembra datos iniciales.
+ * Usa un lock para evitar múltiples inicializaciones simultáneas.
  */
 export async function initializeDatabase(): Promise<void> {
+  // Si ya está inicializada, no hacer nada
+  if (isInitialized) {
+    console.log('[Database] Ya inicializada, omitiendo...');
+    return;
+  }
+
+  // Si hay una inicialización en progreso, esperar a que termine
+  if (initializationPromise) {
+    console.log('[Database] Inicialización en progreso, esperando...');
+    return initializationPromise;
+  }
+
+  // Iniciar nueva inicialización con lock
+  initializationPromise = performInitialization();
+  
+  try {
+    await initializationPromise;
+  } finally {
+    initializationPromise = null;
+  }
+}
+
+/**
+ * Realiza la inicialización interna de la base de datos.
+ */
+async function performInitialization(): Promise<void> {
   const { dbConnection } = await import('./connection');
   const { migrationManager } = await import('./migrations');
   const { seederManager } = await import('./seeds');
@@ -24,6 +55,7 @@ export async function initializeDatabase(): Promise<void> {
   // 3. Sembrar datos iniciales si es necesario
   await seederManager.runAllSeeds();
 
+  isInitialized = true;
   console.log('[Database] Inicialización completada');
 }
 

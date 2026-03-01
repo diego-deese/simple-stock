@@ -10,6 +10,7 @@ class DatabaseConnection {
   private static instance: DatabaseConnection;
   private db: SQLite.SQLiteDatabase | null = null;
   private isInitialized: boolean = false;
+  private connectionPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
   private constructor() {}
 
@@ -25,18 +26,52 @@ class DatabaseConnection {
 
   /**
    * Abre la conexión a la base de datos.
+   * Usa un lock para evitar múltiples conexiones simultáneas.
+   * Configura WAL mode para evitar bloqueos durante operaciones concurrentes.
    */
   async connect(): Promise<SQLite.SQLiteDatabase> {
+    // Si ya está inicializada, retornar la conexión existente
     if (this.db && this.isInitialized) {
       return this.db;
     }
 
+    // Si hay una conexión en progreso, esperar a que termine
+    if (this.connectionPromise) {
+      console.log('[DatabaseConnection] Conexión en progreso, esperando...');
+      return this.connectionPromise;
+    }
+
+    // Iniciar nueva conexión con lock
+    this.connectionPromise = this.initConnection();
+    
     try {
+      const db = await this.connectionPromise;
+      return db;
+    } finally {
+      // Limpiar el promise después de completar (éxito o error)
+      this.connectionPromise = null;
+    }
+  }
+
+  /**
+   * Inicializa la conexión internamente.
+   */
+  private async initConnection(): Promise<SQLite.SQLiteDatabase> {
+    try {
+      console.log('[DatabaseConnection] Abriendo base de datos...');
       this.db = await SQLite.openDatabaseAsync(DB_NAME);
+      
+      // Habilitar WAL mode para mejor rendimiento y evitar bloqueos
+      await this.db.execAsync('PRAGMA journal_mode = WAL;');
+      console.log('[DatabaseConnection] WAL mode habilitado');
+      
       this.isInitialized = true;
       console.log('[DatabaseConnection] Conexión establecida');
       return this.db;
     } catch (error) {
+      // Resetear estado en caso de error
+      this.db = null;
+      this.isInitialized = false;
       console.error('[DatabaseConnection] Error al conectar:', error);
       throw error;
     }

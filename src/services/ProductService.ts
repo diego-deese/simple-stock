@@ -1,5 +1,5 @@
 import { productRepository } from '@repositories/ProductRepository';
-import { Product } from '@app-types/index';
+import { Product, ProductSection } from '@app-types/index';
 
 /**
  * Servicio para la lógica de negocio de productos.
@@ -11,6 +11,13 @@ class ProductService {
    */
   async getActiveProducts(): Promise<Product[]> {
     return productRepository.findActive();
+  }
+
+  /**
+   * Obtiene productos activos agrupados por categoría para SectionList.
+   */
+  async getActiveProductsGrouped(): Promise<ProductSection[]> {
+    return productRepository.findActiveGroupedByCategory();
   }
 
   /**
@@ -31,7 +38,11 @@ class ProductService {
    * Crea un nuevo producto con validaciones.
    * @throws Error si el nombre ya existe o está vacío.
    */
-  async createProduct(name: string, unit: string): Promise<number> {
+  async createProduct(
+    name: string,
+    unit: string,
+    categoryId?: number | null
+  ): Promise<number> {
     // Validaciones
     const trimmedName = name.trim();
     const trimmedUnit = unit.trim();
@@ -50,14 +61,19 @@ class ProductService {
       throw new Error(`Ya existe un producto con el nombre "${trimmedName}"`);
     }
 
-    return productRepository.create(trimmedName, trimmedUnit);
+    return productRepository.create(trimmedName, trimmedUnit, categoryId);
   }
 
   /**
    * Actualiza un producto existente.
    * @throws Error si el producto no existe o el nuevo nombre ya está en uso.
    */
-  async updateProduct(id: number, name: string, unit: string): Promise<void> {
+  async updateProduct(
+    id: number,
+    name: string,
+    unit: string,
+    categoryId?: number | null
+  ): Promise<void> {
     const trimmedName = name.trim();
     const trimmedUnit = unit.trim();
 
@@ -83,7 +99,7 @@ class ProductService {
       }
     }
 
-    await productRepository.updateProduct(id, trimmedName, trimmedUnit);
+    await productRepository.updateProduct(id, trimmedName, trimmedUnit, categoryId);
   }
 
   /**
