@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import { Product } from '@app-types/index';
 import { colors } from '@theme/colors';
 import AccessibleButton from '@components/AccessibleButton';
 import ModalWrapper from '@components/ModalWrapper';
+import FormInput from '@components/FormInput';
 
 const COMMON_UNITS = ['kg', 'litros', 'bultos', 'cajas', 'latas', 'paquetes', 'unidades'];
 
@@ -36,31 +37,38 @@ export function ProductModal({
   onCancel,
   onSave,
 }: ProductModalProps) {
+  const unitRef = useRef<TextInput>(null);
+
   return (
     <ModalWrapper visible={visible} width="90%" avoidKeyboard>
       <Text style={styles.modalTitle}>
         {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
       </Text>
       
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Nombre del producto *</Text>
-        <TextInput
-          style={styles.textInput}
-          value={productName}
-          onChangeText={onNameChange}
-          placeholder="Ej: Arroz, Frijoles, etc."
-          placeholderTextColor="#999"
-        />
-      </View>
+      <FormInput
+        label="Nombre del producto"
+        required
+        value={productName}
+        onChangeText={onNameChange}
+        placeholder="Ej: Arroz, Frijoles, etc."
+        style={styles.textInput}
+        returnKeyType="next"
+        onSubmitEditing={() => unitRef.current?.focus()}
+        blurOnSubmit={false}
+      />
 
       <View style={styles.formGroup}>
-        <Text style={styles.label}>Unidad de medida *</Text>
-        <TextInput
-          style={styles.textInput}
+        <FormInput
+          ref={unitRef}
+          label="Unidad de medida"
+          required
           value={productUnit}
           onChangeText={onUnitChange}
           placeholder="Ej: kg, litros, bultos"
-          placeholderTextColor="#999"
+          style={styles.textInput}
+          containerStyle={styles.unitInputContainer}
+          returnKeyType="done"
+          onSubmitEditing={onSave}
         />
         
         <Text style={styles.unitsLabel}>Unidades comunes:</Text>
@@ -120,11 +128,8 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 20,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
+  unitInputContainer: {
+    marginBottom: 0,
   },
   textInput: {
     borderWidth: 1,
