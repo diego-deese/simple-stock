@@ -13,7 +13,7 @@ import ScreenHeader from '@components/ScreenHeader';
 import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
 import AccessibleButton from '@components/AccessibleButton';
-import { productService } from '@services/index';
+import { productService, reportService } from '@services/index';
 import { CategoryHeader } from '@screens/home/category-header';
 import { ProductItem } from '@screens/home/product-item';
 import { ConfirmationModal } from '@screens/home/confirmation-modal';
@@ -25,6 +25,7 @@ export function DesperdicioScreen() {
     saveDesperdicioReport,
     dbReady,
     products,
+    tempCounts,
   } = useApp();
 
   const [sections, setSections] = useState<ProductSection[]>([]);
@@ -57,6 +58,33 @@ export function DesperdicioScreen() {
     tempDesperdicio.forEach((item: TempDesperdicio) => map.set(item.product_name, item.quantity));
     return map;
   }, [tempDesperdicio]);
+
+  // Mapa de cantidades recibidas (entregas) por producto
+  const [receivedMap, setReceivedMap] = useState<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const loadReceived = async () => {
+      try {
+        // Preferir conteos temporales de entregas (sesión actual)
+        if (tempCounts && tempCounts.length > 0) {
+          const map = new Map<string, number>();
+          tempCounts.forEach(t => map.set(t.product_name, t.quantity));
+          setReceivedMap(map);
+          return;
+        }
+
+        // Fallback: totales históricos de entregas
+        const totals = await reportService.getTotalsByProduct('entregas');
+        const map = new Map<string, number>();
+        totals.forEach(t => map.set(t.product_name, t.total));
+        setReceivedMap(map);
+      } catch (error) {
+        console.error('[DesperdicioScreen] Error loading received totals:', error);
+      }
+    };
+
+    loadReceived();
+  }, [tempCounts]);
 
   const handleSaveReport = async () => {
     try {
@@ -92,17 +120,31 @@ export function DesperdicioScreen() {
 
   const renderProductItem = useCallback(({ item }: { item: Product }) => {
     const quantity = quantityMap.get(item.name) || 0;
+    const received = receivedMap.get(item.name) || 0;
     return (
       <ProductItem
         item={item}
         quantity={quantity}
+        receivedQuantity={received}
         isEditMode={true}
         onDecrement={() => updateTempDesperdicio(item.name, Math.max(0, quantity - 1))}
-        onIncrement={() => updateTempDesperdicio(item.name, quantity + 1)}
-        onQuantityChange={(value) => updateTempDesperdicio(item.name, value)}
+        onIncrement={() => {
+          if (received > 0 && quantity + 1 > received) {
+            Alert.alert('Límite', 'No puedes registrar más desperdicio que lo recibido');
+            return;
+          }
+          updateTempDesperdicio(item.name, quantity + 1);
+        }}
+        onQuantityChange={(value) => {
+          const clamped = received > 0 ? Math.min(value, received) : Math.max(0, value);
+          if (value !== clamped) {
+            Alert.alert('Límite', 'El valor se ha limitado a la cantidad recibida');
+          }
+          updateTempDesperdicio(item.name, clamped);
+        }}
       />
     );
-  }, [quantityMap, updateTempDesperdicio]);
+  }, [quantityMap, updateTempDesperdicio, receivedMap]);
 
   const renderSectionHeader = useCallback(({ section }: { section: ProductSection }) => (
     <CategoryHeader title={section.title} />

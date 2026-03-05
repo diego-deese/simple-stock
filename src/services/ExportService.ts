@@ -32,7 +32,11 @@ class ExportService {
       day: 'numeric',
     });
     
-    const typeLabel = report.type === 'entregas' ? 'Entregas del Proveedor' : 'Pedidos de Cocina';
+    const typeLabel = report.type === 'entregas'
+      ? 'Entregas del Proveedor'
+      : report.type === 'pedidos'
+        ? 'Pedidos de Cocina'
+        : 'Desperdicio';
 
     // Generar CSV
     let csv = `Reporte de ${typeLabel}\n`;
@@ -71,7 +75,7 @@ class ExportService {
 
       const { report, details } = reportData;
       const reportDate = new Date(report.date).toLocaleDateString('es-ES');
-      const typeLabel = report.type === 'entregas' ? 'ENTREGAS' : 'PEDIDOS';
+      const typeLabel = report.type === 'entregas' ? 'ENTREGAS' : report.type === 'pedidos' ? 'PEDIDOS' : 'DESPERDICIO';
 
       csv += `--- ${typeLabel} del ${reportDate} (ID: ${report.id}) ---\n`;
       csv += 'Producto,Cantidad,Unidad\n';
@@ -118,7 +122,7 @@ class ExportService {
 
     for (const record of history) {
       const date = new Date(record.date).toLocaleDateString('es-ES');
-      const typeLabel = record.type === 'entregas' ? 'Entregas' : 'Pedidos';
+      const typeLabel = record.type === 'entregas' ? 'Entregas' : record.type === 'pedidos' ? 'Pedidos' : 'Desperdicio';
       csv += `${date},${typeLabel},${record.quantity}\n`;
       
       if (record.type === 'entregas') {
