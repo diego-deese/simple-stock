@@ -161,7 +161,61 @@ class ProductRepository extends BaseRepository<Product> {
       [categoryId]
     );
   }
+  /**
+   * Finds products delivered in the current month grouped by category.
+   */
+  async findCurrentMonthGroupedByCategory(): Promise<ProductSection[]> {
+    const products = await this.rawQuery<Product>(`
+      SELECT 
+        p.*, 
+        c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id AND c.active = 1
+      WHERE EXISTS (
+        SELECT 1 FROM report_details rd
+        JOIN reports r ON rd.report_id = r.id
+        WHERE rd.product_name = p.name
+          AND r.type = 'entregas'
+          AND strftime('%Y-%m', r.date) = strftime('%Y-%m', CURRENT_DATE)
+      )
+      ORDER BY COALESCE(c.sort_order, 999), c.name, p.name
+    `);
+
+    // Group products by category
+    const groupedMap = new Map<string, { categoryId: number | null; products: Product[] }>();
+
+    for (const product of products) {
+      const categoryName = product.category_name || UNCATEGORIZED_SECTION;
+      const categoryId = product.category_id;
+
+      if (!groupedMap.has(categoryName)) {
+        groupedMap.set(categoryName, { categoryId, products: [] });
+      }
+      groupedMap.get(categoryName)!.products.push(product);
+    }
+
+    // Convert to section format
+    const sections: ProductSection[] = [];
+
+    for (const [title, { categoryId, products }] of groupedMap) {
+      if (title === UNCATEGORIZED_SECTION) continue;
+      sections.push({ title, categoryId, data: products });
+    }
+
+    // Add 'Others' section at the end if exists
+    if (groupedMap.has(UNCATEGORIZED_SECTION)) {
+      const uncategorized = groupedMap.get(UNCATEGORIZED_SECTION)!;
+      sections.push({
+        title: UNCATEGORIZED_SECTION,
+        categoryId: null,
+        data: uncategorized.products,
+      });
+    }
+
+    return sections;
+  }
 }
 
-// Exportar instancia singleton
+
+  // Exportar instancia singleton
 export const productRepository = new ProductRepository();
