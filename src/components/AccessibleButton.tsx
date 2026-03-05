@@ -1,12 +1,12 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle, useWindowDimensions, ActivityIndicator, StyleProp } from 'react-native';
 import { colors } from '@theme/colors';
 
 interface AccessibleButtonProps {
   title: string;
   onPress: () => void;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'danger' | 'success';
   responsiveText?: boolean;

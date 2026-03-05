@@ -6,8 +6,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { Report } from '@app-types/index';
+import { Report, MovementType } from '@app-types/index';
 import { colors } from '@theme/colors';
+
+// Colores para los tipos de movimiento
+const ENTREGAS_COLOR = '#4CAF50';
+const PEDIDOS_COLOR = '#FF9800';
 
 interface ReportItemProps {
   item: Report;
@@ -17,13 +21,36 @@ interface ReportItemProps {
   formatDate: (date: string) => string;
 }
 
+const getTypeConfig = (type: MovementType) => {
+  if (type === 'entregas') {
+    return {
+      label: 'Entregas del Proveedor',
+      emoji: '📦',
+      color: ENTREGAS_COLOR,
+    };
+  }
+  return {
+    label: 'Pedidos de Cocina',
+    emoji: '📋',
+    color: PEDIDOS_COLOR,
+  };
+};
+
 export function ReportItem({ item, exporting, onPress, onExport, formatDate }: ReportItemProps) {
+  const typeConfig = getTypeConfig(item.type || 'entregas');
+  
   return (
     <TouchableOpacity
-      style={styles.reportItem}
+      style={[styles.reportItem, { borderLeftColor: typeConfig.color }]}
       onPress={() => onPress(item)}
     >
       <View style={styles.reportInfo}>
+        <View style={styles.typeRow}>
+          <Text style={styles.typeEmoji}>{typeConfig.emoji}</Text>
+          <Text style={[styles.typeLabel, { color: typeConfig.color }]}>
+            {typeConfig.label}
+          </Text>
+        </View>
         <Text style={styles.reportDate}>{formatDate(item.date)}</Text>
         <Text style={styles.reportSubtitle}>Toca para ver detalles</Text>
       </View>
@@ -65,9 +92,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderLeftWidth: 4,
   },
   reportInfo: {
     flex: 1,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  typeEmoji: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  typeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   reportDate: {
     fontSize: 18,

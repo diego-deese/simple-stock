@@ -1,21 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
+  Text,
   StyleSheet,
   FlatList,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '@context/AppContext';
 import { useAuth } from '@context/AuthContext';
 import { reportService, exportService } from '@services/index';
-import { Report, ReportDetail } from '@app-types/index';
+import { Report, ReportDetail, MovementType } from '@app-types/index';
 import { colors } from '@theme/colors';
 import { ReportItem } from './report-item';
 import { ReportDetailsModal } from './report-details-modal';
 import LoadingScreen from '@components/LoadingScreen';
 import ScreenHeader from '@components/ScreenHeader';
 import EmptyState from '@components/EmptyState';
+
+// Colores para los tipos de movimiento
+const ENTREGAS_COLOR = '#4CAF50';
+const PEDIDOS_COLOR = '#FF9800';
+
+type FilterType = 'all' | MovementType;
 
 export function History() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -26,6 +34,22 @@ export function History() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+
+  // Filtrar reportes según el filtro activo
+  const filteredReports = useMemo(() => {
+    if (activeFilter === 'all') {
+      return reports;
+    }
+    return reports.filter(report => report.type === activeFilter);
+  }, [reports, activeFilter]);
+
+  // Contar reportes por tipo
+  const counts = useMemo(() => ({
+    all: reports.length,
+    entregas: reports.filter(r => r.type === 'entregas').length,
+    pedidos: reports.filter(r => r.type === 'pedidos').length,
+  }), [reports]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -105,14 +129,62 @@ export function History() {
     <View style={styles.container}>
       <ScreenHeader
         title="Historial de Reportes"
-        subtitle={`${reports.length} reporte${reports.length !== 1 ? 's' : ''} guardado${reports.length !== 1 ? 's' : ''}`}
+        subtitle={`${filteredReports.length} reporte${filteredReports.length !== 1 ? 's' : ''} guardado${filteredReports.length !== 1 ? 's' : ''}`}
         backgroundColor={colors.primaryDark}
         showBackButton
         backRoute="/admin"
       />
 
+      {/* Filtros de tipo */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            activeFilter === 'all' && styles.filterButtonActive,
+          ]}
+          onPress={() => setActiveFilter('all')}
+        >
+          <Text style={[
+            styles.filterText,
+            activeFilter === 'all' && styles.filterTextActive,
+          ]}>
+            Todos ({counts.all})
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            activeFilter === 'entregas' && styles.filterButtonEntregas,
+          ]}
+          onPress={() => setActiveFilter('entregas')}
+        >
+          <Text style={[
+            styles.filterText,
+            activeFilter === 'entregas' && styles.filterTextActive,
+          ]}>
+            📦 Entregas ({counts.entregas})
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            activeFilter === 'pedidos' && styles.filterButtonPedidos,
+          ]}
+          onPress={() => setActiveFilter('pedidos')}
+        >
+          <Text style={[
+            styles.filterText,
+            activeFilter === 'pedidos' && styles.filterTextActive,
+          ]}>
+            📋 Pedidos ({counts.pedidos})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
-        data={reports}
+        data={filteredReports}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <ReportItem
@@ -127,8 +199,14 @@ export function History() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <EmptyState
-            message="No hay reportes guardados"
-            hint="Los reportes aparecerán aquí después de guardarlos"
+            message={activeFilter === 'all' 
+              ? "No hay reportes guardados"
+              : `No hay ${activeFilter === 'entregas' ? 'entregas' : 'pedidos'} registrados`
+            }
+            hint={activeFilter === 'all'
+              ? "Los reportes aparecerán aquí después de guardarlos"
+              : "Cambia el filtro o registra movimientos"
+            }
             style={styles.emptyContainer}
           />
         }
@@ -152,6 +230,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: colors.backgroundDark,
+    alignItems: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  filterButtonEntregas: {
+    backgroundColor: ENTREGAS_COLOR,
+  },
+  filterButtonPedidos: {
+    backgroundColor: PEDIDOS_COLOR,
+  },
+  filterText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  filterTextActive: {
+    color: colors.white,
   },
   reportList: {
     flex: 1,

@@ -1,5 +1,5 @@
-import { Home } from '@screens/home';
+import RegistroScreen from '@screens/registro';
 
-export default function HomeScreen() {
-  return <Home />;
+export default function RegistroTab() {
+  return <RegistroScreen />;
 }
