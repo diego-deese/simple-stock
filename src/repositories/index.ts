@@ -6,4 +6,6 @@ export { productRepository } from './ProductRepository';
 export { categoryRepository } from './CategoryRepository';
 export { reportRepository, reportDetailRepository } from './ReportRepository';
 export { tempCountRepository } from './TempCountRepository';
+export { tempPedidosRepository } from './TempPedidosRepository';
+export { inventoryRepository } from './InventoryRepository';
 export { adminRepository } from './AdminRepository';
