@@ -1,9 +1,15 @@
 import { reportRepository, reportDetailRepository } from '@repositories/ReportRepository';
 import { tempCountRepository } from '@repositories/TempCountRepository';
-import { Report, ReportDetail, TempCount, ReportWithDetails } from '@app-types/index';
+import { tempPedidosRepository } from '@repositories/TempPedidosRepository';
+import { tempDesperdicioRepository } from '@repositories/TempDesperdicioRepository';
+import { Report, ReportDetail, TempCount, TempPedido, TempDesperdicio, ReportWithDetails, MovementType } from '@app-types/index';
 
 /**
  * Servicio para la lógica de negocio de reportes.
+ * 
+ * Modelo "Pedidos vs Entregas":
+ * - Pedidos: Lo que cocina necesita del proveedor
+ * - Entregas: Lo que el proveedor entrega
  */
 class ReportService {
   /**
@@ -11,6 +17,27 @@ class ReportService {
    */
   async getAllReports(): Promise<Report[]> {
     return reportRepository.findAllOrdered();
+  }
+
+  /**
+   * Obtiene reportes por tipo de movimiento.
+   */
+  async getReportsByType(type: MovementType): Promise<Report[]> {
+    return reportRepository.findByType(type);
+  }
+
+   /**
+    * Obtiene solo reportes de entregas.
+    */
+  async getEntregasReports(): Promise<Report[]> {
+    return reportRepository.findEntregas();
+  }
+
+   /**
+    * Obtiene solo reportes de pedidos.
+    */
+  async getPedidosReports(): Promise<Report[]> {
+    return reportRepository.findPedidos();
   }
 
   /**
@@ -35,10 +62,10 @@ class ReportService {
   }
 
   /**
-   * Guarda un nuevo reporte a partir de los conteos temporales.
+   * Guarda un nuevo reporte de entregas a partir de los conteos temporales.
    * @throws Error si no hay conteos para guardar.
    */
-  async saveReport(counts: TempCount[]): Promise<number> {
+  async saveEntregasReport(counts: TempCount[]): Promise<number> {
     // Filtrar solo cantidades positivas
     const validCounts = counts.filter(c => c.quantity > 0);
 
@@ -46,8 +73,8 @@ class ReportService {
       throw new Error('No hay productos con cantidades para guardar');
     }
 
-    // Crear el reporte
-    const reportId = await reportRepository.createWithDetails(validCounts);
+    // Crear el reporte de entregas
+    const reportId = await reportRepository.createWithDetails(validCounts, 'entregas');
 
     // Limpiar conteos temporales después de guardar exitosamente
     await tempCountRepository.clearAll();
@@ -56,11 +83,59 @@ class ReportService {
   }
 
   /**
+   * Guarda o actualiza el reporte de pedidos del mes actual.
+   * Si ya existe un reporte de pedidos para este mes, lo actualiza (reemplaza).
+   * Si no existe, crea uno nuevo.
+   * @throws Error si no hay pedidos para guardar.
+   */
+  async savePedidosReport(pedidos: TempPedido[]): Promise<number> {
+    // Filtrar solo cantidades positivas
+    const validPedidos = pedidos.filter(pedido => pedido.quantity > 0);
+
+    if (validPedidos.length === 0) {
+      throw new Error('No hay productos con cantidades para guardar');
+    }
+
+    // Crear o actualizar el reporte de pedido del mes actual
+    const reportId = await reportRepository.upsertPedidosReport(validPedidos);
+
+    // Limpiar pedidos temporales después de guardar exitosamente
+    await tempPedidosRepository.clearAll();
+
+    return reportId;
+  }
+
+  /**
+   * Obtiene el reporte de pedidos del mes actual con sus detalles.
+   * Útil para cargar valores existentes en la pantalla de pedidos.
+   */
+  async getCurrentMonthPedidosReport(): Promise<ReportWithDetails | null> {
+    return reportRepository.getCurrentMonthPedidosReport();
+  }
+
+  /**
+   * Obtiene el reporte de pedidos del mes anterior con sus detalles.
+   * Útil para copiar automáticamente cuando se inicia un nuevo mes.
+   */
+  async getPreviousMonthPedidosReport(): Promise<ReportWithDetails | null> {
+    return reportRepository.getPreviousMonthPedidosReport();
+  }
+
+  /**
+   * Guarda un nuevo reporte (mantener compatibilidad con código existente).
+   * Por defecto crea un reporte de entregas.
+   * @throws Error si no hay conteos para guardar.
+   */
+  async saveReport(counts: TempCount[]): Promise<number> {
+    return this.saveEntregasReport(counts);
+  }
+
+  /**
    * Elimina un reporte y todos sus detalles.
    */
   async deleteReport(reportId: number): Promise<void> {
-    const exists = await reportRepository.findById(reportId);
-    if (!exists) {
+    const reportWithDetails = await reportRepository.findByIdWithDetails(reportId);
+    if (!reportWithDetails) {
       throw new Error('Reporte no encontrado');
     }
 
@@ -72,6 +147,17 @@ class ReportService {
    */
   async getReportsByDateRange(startDate: Date, endDate: Date): Promise<Report[]> {
     return reportRepository.findByDateRange(
+      startDate.toISOString(),
+      endDate.toISOString()
+    );
+  }
+
+  /**
+   * Obtiene reportes por tipo dentro de un rango de fechas.
+   */
+  async getReportsByTypeAndDateRange(type: MovementType, startDate: Date, endDate: Date): Promise<Report[]> {
+    return reportRepository.findByTypeAndDateRange(
+      type,
       startDate.toISOString(),
       endDate.toISOString()
     );
@@ -98,7 +184,14 @@ class ReportService {
     return reportDetailRepository.getTotalByProduct(productName);
   }
 
-  // === GESTIÓN DE CONTEOS TEMPORALES ===
+  /**
+   * Obtiene totales por producto para un tipo de movimiento.
+   */
+  async getTotalsByProduct(type: MovementType): Promise<{ product_name: string; total: number }[]> {
+    return reportRepository.getTotalsByProduct(type);
+  }
+
+  // === GESTIÓN DE CONTEOS TEMPORALES (ENTREGAS) ===
 
   /**
    * Guarda un conteo temporal.
@@ -133,6 +226,73 @@ class ReportService {
    */
   async hasPendingCounts(): Promise<boolean> {
     return tempCountRepository.hasPendingCounts();
+  }
+
+  // === GESTIÓN DE DESPERDICIOS TEMPORALES ===
+
+  /**
+   * Saves a temporary desperdicio entry.
+   */
+  async saveTempDesperdicio(productName: string, quantity: number): Promise<void> {
+    await tempDesperdicioRepository.upsert(productName, quantity);
+  }
+
+  /**
+   * Saves multiple temporary desperdicio entries.
+   */
+  async saveTempDesperdicios(desperdicios: TempDesperdicio[]): Promise<void> {
+    await tempDesperdicioRepository.upsertMany(desperdicios);
+  }
+
+  /**
+   * Retrieves all temporary desperdicio entries.
+   */
+  async getTempDesperdicio(): Promise<TempDesperdicio[]> {
+    return tempDesperdicioRepository.getAll();
+  }
+
+  /**
+   * Clears all temporary desperdicio entries.
+   */
+  async clearTempDesperdicio(): Promise<void> {
+    await tempDesperdicioRepository.clearAll();
+  }
+
+// === GESTIÓN DE PEDIDOS TEMPORALES ===
+
+  /**
+   * Guarda un pedido temporal.
+   */
+  async saveTempPedido(productName: string, quantity: number): Promise<void> {
+    await tempPedidosRepository.upsert(productName, quantity);
+  }
+
+  /**
+   * Guarda múltiples pedidos temporales.
+   */
+  async saveTempPedidos(pedidos: TempPedido[]): Promise<void> {
+    await tempPedidosRepository.upsertMany(pedidos);
+  }
+
+  /**
+   * Obtiene todos los pedidos temporales.
+   */
+  async getTempPedidos(): Promise<TempPedido[]> {
+    return tempPedidosRepository.getAll();
+  }
+
+  /**
+   * Limpia todos los pedidos temporales.
+   */
+  async clearTempPedidos(): Promise<void> {
+    await tempPedidosRepository.clearAll();
+  }
+
+  /**
+   * Verifica si hay pedidos pendientes de guardar.
+   */
+  async hasPendingPedidos(): Promise<boolean> {
+    return tempPedidosRepository.hasPendingPedidos();
   }
 }
 
