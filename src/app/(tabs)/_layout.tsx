@@ -44,8 +44,26 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Registrar',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📝" focused={focused} />,
+          title: 'Registro',
+          tabBarIcon: ({ focused }) => (
+            <TabIcon emoji="📝" focused={focused} />
+          ),
+        }}
+      />
+<Tabs.Screen
+         name="desperdicio"
+         options={{
+           title: 'Desperdicio',
+           tabBarIcon: ({ focused }) => (
+             <TabIcon emoji="♻️" focused={focused} />
+           ),
+         }}
+       />
+       <Tabs.Screen
+         name="balance"
+        options={{
+          title: 'Balance',
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
         }}
       />
       <Tabs.Screen

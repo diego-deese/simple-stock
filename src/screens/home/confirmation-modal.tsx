@@ -29,10 +29,10 @@ export function ConfirmationModal({
 
   return (
     <ModalWrapper visible={visible} maxHeight="70%">
-      <Text style={styles.modalTitle}>Confirmar Reporte</Text>
+      <Text style={styles.modalTitle}>Confirmar reporte de desperdicio</Text>
       
       <Text style={styles.modalSubtitle}>
-        Se registrarán los siguientes productos:
+        Se registrarán los siguientes productos como desperdicio:
       </Text>
       
       <FlatList
@@ -48,16 +48,16 @@ export function ConfirmationModal({
       />
       
       <View style={styles.modalButtons}>
-        <AccessibleButton
-          title="Cancelar"
+         <AccessibleButton
+           title="Cancelar"
           onPress={onCancel}
           disabled={saving}
           variant="secondary"
           style={styles.modalButton}
         />
         
-        <AccessibleButton
-          title="Guardar"
+         <AccessibleButton
+           title="Guardar reporte"
           onPress={onConfirm}
           loading={saving}
           variant="primary"

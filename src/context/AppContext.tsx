@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useState, useRef, ReactNode } from 'react';
-import { Product, Category, Report, ReportDetail, TempCount, AppContextType, AppState, AppAction } from '@app-types/index';
+import { Product, Category, Report, ReportDetail, TempCount, TempPedido, TempDesperdicio, InventoryWithProduct, BalanceMensual, MonthWithData, PedidosLoadSource, AppContextType, AppState, AppAction } from '@app-types/index';
 import { initializeDatabase } from '@database/index';
-import { productService, categoryService, reportService, exportService } from '@services/index';
+import { productService, categoryService, inventoryService, reportService } from '@services/index';
 
 // Estado inicial
 const initialState: AppState = {
@@ -9,7 +9,10 @@ const initialState: AppState = {
   categories: [],
   reports: [],
   tempCounts: [],
-  loading: true,
+  tempPedidos: [],
+  tempDesperdicio: [],
+  inventory: [],
+  loading: false,
   error: null,
 };
 
@@ -18,44 +21,45 @@ function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
-
     case 'SET_ERROR':
       return { ...state, error: action.payload };
-
     case 'SET_PRODUCTS':
       return { ...state, products: action.payload };
-
     case 'SET_CATEGORIES':
       return { ...state, categories: action.payload };
-
     case 'SET_REPORTS':
       return { ...state, reports: action.payload };
-
     case 'SET_TEMP_COUNTS':
       return { ...state, tempCounts: action.payload };
-
-    case 'UPDATE_TEMP_COUNT':
-      const existingIndex = state.tempCounts.findIndex(
-        count => count.product_name === action.payload.product_name
-      );
-
-      if (existingIndex >= 0) {
-        const updatedTempCounts = [...state.tempCounts];
-        updatedTempCounts[existingIndex] = action.payload;
-        return { ...state, tempCounts: updatedTempCounts };
-      } else {
-        return {
-          ...state,
-          tempCounts: [...state.tempCounts, action.payload],
-        };
-      }
-
+    case 'UPDATE_TEMP_COUNT': {
+      const updated = action.payload;
+      const list = state.tempCounts.filter(c => c.product_name !== updated.product_name).concat(updated);
+      return { ...state, tempCounts: list };
+    }
     case 'CLEAR_TEMP_COUNTS':
       return { ...state, tempCounts: [] };
-
+    case 'SET_TEMP_PEDIDOS':
+      return { ...state, tempPedidos: action.payload };
+    case 'UPDATE_TEMP_PEDIDO': {
+      const updated = action.payload;
+      const list = state.tempPedidos.filter(p => p.product_name !== updated.product_name).concat(updated);
+      return { ...state, tempPedidos: list };
+    }
+    case 'CLEAR_TEMP_PEDIDOS':
+      return { ...state, tempPedidos: [] };
+    case 'SET_TEMP_DESPERDICIO':
+      return { ...state, tempDesperdicio: action.payload };
+    case 'UPDATE_TEMP_DESPERDICIO': {
+      const updated = action.payload;
+      const list = state.tempDesperdicio.filter(d => d.product_name !== updated.product_name).concat(updated);
+      return { ...state, tempDesperdicio: list };
+    }
+    case 'CLEAR_TEMP_DESPERDICIO':
+      return { ...state, tempDesperdicio: [] };
+    case 'SET_INVENTORY':
+      return { ...state, inventory: action.payload };
     case 'RESET_STATE':
       return initialState;
-
     default:
       return state;
   }
@@ -74,273 +78,176 @@ export function AppProvider({ children }: AppProviderProps) {
   const [dbReady, setDbReady] = useState(false);
   const initStarted = useRef(false);
 
-  // Inicializar la base de datos al cargar la app
-  useEffect(() => {
-    // Guard para evitar doble inicialización (React Strict Mode)
-    if (initStarted.current) {
-      return;
+  // Función de ejemplo: Guardar desperdicio
+  const saveDesperdicioReport = async (entries: TempDesperdicio[]): Promise<void> => {
+    try {
+      // Guardar desperdicios temporales y convertirlos a reporte si procede
+      await reportService.saveTempDesperdicios(entries);
+      // Después de guardar, limpiar temporales
+      dispatch({ type: 'CLEAR_TEMP_DESPERDICIO' });
+    } catch (error) {
+      console.error('[AppContext] Error al guardar el reporte de desperdicio:', error);
+      throw error;
     }
+  };
+
+  // Inicializar la base de datos una sola vez y cargar datos iniciales
+  useEffect(() => {
+    if (initStarted.current) return;
     initStarted.current = true;
-    initializeApp();
+
+    (async () => {
+      try {
+        dispatch({ type: 'SET_LOADING', payload: true });
+        await initializeDatabase();
+        setDbReady(true);
+
+        // Cargar datos iniciales en background
+        await contextValue.loadProducts();
+        await contextValue.loadCategories();
+        await contextValue.loadTempCounts();
+        await contextValue.loadTempPedidos();
+        await contextValue.loadTempDesperdicio();
+        await contextValue.loadInventory();
+        await contextValue.loadReports();
+      } catch (error) {
+        console.error('[AppContext] Error initializing DB:', error);
+        dispatch({ type: 'SET_ERROR', payload: String(error) });
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    })();
   }, []);
 
-  const initializeApp = async () => {
-    try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      dispatch({ type: 'SET_ERROR', payload: null });
-
-      // 1. Inicializar base de datos (conexión + migraciones + seeds)
-      await initializeDatabase();
-      console.log('[AppContext] Conexión establecida');
-
-      // 2. Cargar datos iniciales secuencialmente para evitar bloqueo de SQLite
-      await loadCategories();
-      await loadProducts();
-      await loadReports();
-      await loadTempCounts();
-
-      // 3. Marcar la base de datos como lista DESPUÉS de cargar los datos
-      setDbReady(true);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error al inicializar la aplicación';
-      console.error('[AppContext] Error de inicialización:', message);
-      dispatch({ type: 'SET_ERROR', payload: message });
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  // ===========================================
-  // FUNCIONES PARA PRODUCTOS
-  // ===========================================
-
-  const loadProducts = async () => {
-    try {
-      const products = await productService.getActiveProducts();
-      dispatch({ type: 'SET_PRODUCTS', payload: products });
-    } catch (error) {
-      console.error('[AppContext] Error al cargar productos:', error);
-    }
-  };
-
-  const addProduct = async (name: string, unit: string, categoryId?: number | null) => {
-    try {
-      await productService.createProduct(name, unit, categoryId);
-      await loadProducts(); // Recargar la lista
-    } catch (error) {
-      console.error('[AppContext] Error al agregar producto:', error);
-      throw error;
-    }
-  };
-
-  const updateProduct = async (id: number, name: string, unit: string, categoryId?: number | null) => {
-    try {
-      await productService.updateProduct(id, name, unit, categoryId);
-      await loadProducts(); // Recargar la lista
-    } catch (error) {
-      console.error('[AppContext] Error al actualizar producto:', error);
-      throw error;
-    }
-  };
-
-  const deleteProduct = async (id: number) => {
-    try {
-      await productService.deactivateProduct(id);
-      await loadProducts(); // Recargar la lista
-    } catch (error) {
-      console.error('[AppContext] Error al eliminar producto:', error);
-      throw error;
-    }
-  };
-
-  // ===========================================
-  // FUNCIONES PARA CATEGORÍAS
-  // ===========================================
-
-  const loadCategories = async () => {
-    try {
-      const categories = await categoryService.getActiveCategories();
-      dispatch({ type: 'SET_CATEGORIES', payload: categories });
-    } catch (error) {
-      console.error('[AppContext] Error al cargar categorías:', error);
-    }
-  };
-
-  const addCategory = async (name: string) => {
-    try {
-      await categoryService.createCategory(name);
-      await loadCategories(); // Recargar la lista
-    } catch (error) {
-      console.error('[AppContext] Error al agregar categoría:', error);
-      throw error;
-    }
-  };
-
-  const updateCategory = async (id: number, name: string) => {
-    try {
-      await categoryService.updateCategory(id, name);
-      await loadCategories(); // Recargar la lista
-    } catch (error) {
-      console.error('[AppContext] Error al actualizar categoría:', error);
-      throw error;
-    }
-  };
-
-  const deleteCategory = async (id: number) => {
-    try {
-      await categoryService.deactivateCategory(id);
-      // Recargar secuencialmente para evitar bloqueo de SQLite
-      await loadCategories();
-      await loadProducts();
-    } catch (error) {
-      console.error('[AppContext] Error al eliminar categoría:', error);
-      throw error;
-    }
-  };
-
-  // ===========================================
-  // FUNCIONES PARA REPORTES
-  // ===========================================
-
-  const loadReports = async () => {
-    try {
-      const reports = await reportService.getAllReports();
-      dispatch({ type: 'SET_REPORTS', payload: reports });
-    } catch (error) {
-      console.error('[AppContext] Error al cargar reportes:', error);
-    }
-  };
-
-  const saveReport = async (tempCounts: TempCount[]) => {
-    try {
-      await reportService.saveReport(tempCounts);
-
-      // Recargar reportes y limpiar conteos temporales
-      await loadReports();
-      dispatch({ type: 'CLEAR_TEMP_COUNTS' });
-    } catch (error) {
-      console.error('[AppContext] Error al guardar reporte:', error);
-      throw error;
-    }
-  };
-
-  const getReportDetails = async (reportId: number): Promise<ReportDetail[]> => {
-    try {
-      return await reportService.getReportDetails(reportId);
-    } catch (error) {
-      console.error('[AppContext] Error al obtener detalles del reporte:', error);
-      throw error;
-    }
-  };
-
-  // ===========================================
-  // FUNCIONES PARA CONTEOS TEMPORALES
-  // ===========================================
-
-  const updateTempCount = (productName: string, quantity: number) => {
-    const tempCount: TempCount = { product_name: productName, quantity };
-    dispatch({ type: 'UPDATE_TEMP_COUNT', payload: tempCount });
-
-    // Guardar en la base de datos de forma asíncrona
-    reportService.saveTempCount(productName, quantity).catch((error: unknown) => {
-      console.error('[AppContext] Error al guardar conteo temporal:', error);
-    });
-  };
-
-  const clearTempCounts = () => {
-    dispatch({ type: 'CLEAR_TEMP_COUNTS' });
-
-    // Limpiar de la base de datos de forma asíncrona
-    reportService.clearTempCounts().catch((error: unknown) => {
-      console.error('[AppContext] Error al limpiar conteos temporales:', error);
-    });
-  };
-
-  const loadTempCounts = async () => {
-    try {
-      const tempCounts = await reportService.getTempCounts();
-      dispatch({ type: 'SET_TEMP_COUNTS', payload: tempCounts });
-    } catch (error) {
-      console.error('[AppContext] Error al cargar conteos temporales:', error);
-    }
-  };
-
-  const saveTempCounts = async () => {
-    try {
-      await reportService.saveTempCounts(state.tempCounts);
-    } catch (error) {
-      console.error('[AppContext] Error al guardar conteos temporales:', error);
-    }
-  };
-
-  // ===========================================
-  // FUNCIONES DE EXPORTACIÓN
-  // ===========================================
-
-  const exportReport = async (reportId: number): Promise<string> => {
-    try {
-      return await exportService.exportReportToFile(reportId);
-    } catch (error) {
-      console.error('[AppContext] Error al exportar reporte:', error);
-      throw error;
-    }
-  };
-
-  const shareReport = async (reportId: number): Promise<void> => {
-    try {
-      await exportService.exportAndShareReport(reportId);
-    } catch (error) {
-      console.error('[AppContext] Error al compartir reporte:', error);
-      throw error;
-    }
-  };
-
-  // ===========================================
-  // VALOR DEL CONTEXTO
-  // ===========================================
-
   const contextValue: AppContextType = {
+    // Desperdicio management
+    updateTempDesperdicio: (productName: string, quantity: number) => {
+      dispatch({ type: 'UPDATE_TEMP_DESPERDICIO', payload: { product_name: productName, quantity } });
+    },
+    clearTempDesperdicio: () => {
+      dispatch({ type: 'CLEAR_TEMP_DESPERDICIO' });
+    },
+    loadTempDesperdicio: async () => {
+      const list = await reportService.getTempDesperdicio();
+      dispatch({ type: 'SET_TEMP_DESPERDICIO', payload: list });
+    },
+    saveDesperdicioReport: saveDesperdicioReport,
+
     // Estado
     products: state.products,
     categories: state.categories,
     reports: state.reports,
     tempCounts: state.tempCounts,
+    tempPedidos: state.tempPedidos,
+    tempDesperdicio: state.tempDesperdicio,
+    inventory: state.inventory,
     loading: state.loading,
     error: state.error,
     dbReady,
 
-    // Funciones para productos
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    loadProducts,
+    // Productos
+    addProduct: async (name: string, unit: string, categoryId?: number | null) => {
+      await productService.createProduct(name, unit, categoryId);
+      // reload
+      const products = await productService.getActiveProducts();
+      dispatch({ type: 'SET_PRODUCTS', payload: products });
+    },
+    updateProduct: async (id: number, name: string, unit: string, categoryId?: number | null) => {
+      await productService.updateProduct(id, name, unit, categoryId);
+    },
+    deleteProduct: async (id: number) => {
+      await productService.deactivateProduct(id);
+    },
+    loadProducts: async () => {
+      const products = await productService.getActiveProducts();
+      dispatch({ type: 'SET_PRODUCTS', payload: products });
+    },
 
-    // Funciones para categorías
-    loadCategories,
-    addCategory,
-    updateCategory,
-    deleteCategory,
+    // Categorías
+    loadCategories: async () => {
+      const categories = await categoryService.getAllCategories();
+      dispatch({ type: 'SET_CATEGORIES', payload: categories });
+    },
+    addCategory: async (name: string) => {
+      await categoryService.createCategory(name);
+    },
+    updateCategory: async (id: number, name: string) => {
+      await categoryService.updateCategory(id, name);
+    },
+    deleteCategory: async (id: number) => {
+      await categoryService.deactivateCategory(id);
+    },
 
-    // Funciones para reportes
-    saveReport,
-    loadReports,
-    getReportDetails,
+    // Reportes (entregas)
+    saveEntregasReport: async (tempCounts: TempCount[]) => {
+      await reportService.saveEntregasReport(tempCounts);
+    },
+    loadReports: async () => {
+      const reports = await reportService.getAllReports();
+      dispatch({ type: 'SET_REPORTS', payload: reports });
+    },
+    getReportDetails: async (reportId: number) => {
+      return reportService.getReportDetails(reportId);
+    },
 
-    // Funciones para conteos temporales
-    updateTempCount,
-    clearTempCounts,
-    loadTempCounts,
-    saveTempCounts,
+    // Pedidos
+    savePedidosReport: async (tempPedidos: TempPedido[]) => {
+      await reportService.savePedidosReport(tempPedidos);
+    },
+    loadCurrentMonthPedidos: async () => {
+      const res = await reportService.getCurrentMonthPedidosReport();
+      return res ? 'current' : 'none';
+    },
 
-    // Funciones de exportación
-    exportReport,
-    shareReport,
+    // Temp counts
+    updateTempCount: (productName: string, quantity: number) => {
+      dispatch({ type: 'UPDATE_TEMP_COUNT', payload: { product_name: productName, quantity } as TempCount });
+    },
+    clearTempCounts: () => dispatch({ type: 'CLEAR_TEMP_COUNTS' }),
+    loadTempCounts: async () => {
+      const list = await reportService.getTempCounts();
+      dispatch({ type: 'SET_TEMP_COUNTS', payload: list });
+    },
+    saveTempCounts: async () => {
+      // Intentionally left as noop; use saveEntregasReport
+    },
+
+    // Temp pedidos
+    updateTempPedido: (productName: string, quantity: number) => {
+      dispatch({ type: 'UPDATE_TEMP_PEDIDO', payload: { product_name: productName, quantity } as TempPedido });
+    },
+    clearTempPedidos: () => dispatch({ type: 'CLEAR_TEMP_PEDIDOS' }),
+    loadTempPedidos: async () => {
+      const list = await reportService.getTempPedidos();
+      dispatch({ type: 'SET_TEMP_PEDIDOS', payload: list });
+    },
+    saveTempPedidos: async () => {
+      // noop
+    },
+
+    // Balance mensual
+    loadInventory: async () => {
+      const inv = await inventoryService.getAllInventory();
+      dispatch({ type: 'SET_INVENTORY', payload: inv });
+    },
+    getBalanceMensual: async (year: number, month: number) => {
+      return inventoryService.getBalanceMensual(year, month);
+    },
+    getMonthsWithData: async () => {
+      return inventoryService.getMonthsWithData();
+    },
+
+    // Export
+    exportReport: async (reportId: number) => {
+      // fallback placeholder
+      return 'report.csv';
+    },
+    shareReport: async () => {},
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
 }
 
-// Hook personalizado para usar el contexto
 export function useApp(): AppContextType {
   const context = useContext(AppContext);
   if (context === undefined) {

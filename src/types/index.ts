@@ -37,6 +37,7 @@ export interface Product {
 export interface Report {
   id: number;
   date: string; // ISO string format
+  type: MovementType; // 'entregas' o 'pedidos'
   created_at?: string;
 }
 
@@ -60,6 +61,85 @@ export interface TempCount {
   quantity: number;
   updated_at?: string;
 }
+
+// ===========================================
+// TIPOS DE MOVIMIENTOS (PEDIDOS VS ENTREGAS)
+// ===========================================
+
+/**
+ * Tipo de movimiento en el sistema.
+ * - pedidos: Lo que cocina necesita/pide al proveedor
+ * - entregas: Cargamentos que el proveedor entrega
+ */
+export type MovementType = 'pedidos' | 'entregas';
+
+/**
+ * Registro de inventario actual de un producto.
+ */
+export interface Inventory {
+  id: number;
+  product_id: number;
+  product_name: string;
+  current_quantity: number;
+  last_entry_date: string | null;
+  last_output_date: string | null;
+  updated_at?: string;
+}
+
+/**
+ * Inventario con información extendida del producto.
+ */
+export interface InventoryWithProduct extends Inventory {
+  unit: string;
+  category_id: number | null;
+  category_name?: string;
+  product_active: boolean;
+}
+
+/**
+ * Pedido temporal durante el registro (similar a TempCount).
+ */
+
+/**
+ * Desperdicio temporal durante el registro (similar a TempPedido).
+ */
+export interface TempDesperdicio {
+  product_name: string;
+  quantity: number;
+  updated_at?: string;
+}
+export interface TempPedido {
+  product_name: string;
+  quantity: number;
+  updated_at?: string;
+}
+
+/**
+ * Balance mensual de un producto (pedido vs entregas).
+ */
+export interface BalanceMensual {
+  product_id: number;
+  product_name: string;
+  unit: string;
+  category_name?: string;
+  total_pedidos: number;   // Lo que se pidió
+  total_entregas: number;  // Lo que llegó
+  total_desperdicio: number; // Lo que se desperdició
+  diferencia: number;      // Entregas - Pedidos - Desperdicio
+}
+
+/**
+ * Mes con datos registrados (para el selector de meses).
+ */
+export interface MonthWithData {
+  year: number;
+  month: number;
+}
+
+/**
+ * Indica de dónde se cargaron los pedidos al iniciar el mes.
+ */
+export type PedidosLoadSource = 'current' | 'previous' | 'none';
 
 // ===========================================
 // DTOs (Data Transfer Objects)
@@ -116,6 +196,7 @@ export interface ProductSection {
  */
 export interface CreateReportDTO {
   counts: TempCount[];
+  type?: MovementType; // Por defecto 'entregas'
 }
 
 /**
@@ -132,6 +213,7 @@ export interface ReportWithDetails {
 export interface ReportSummary {
   id: number;
   date: string;
+  type: MovementType;
   totalItems: number;
   totalQuantity: number;
 }
@@ -181,6 +263,9 @@ export interface AppState {
   categories: Category[];
   reports: Report[];
   tempCounts: TempCount[];
+  tempPedidos: TempPedido[];
+  tempDesperdicio: TempDesperdicio[];
+  inventory: InventoryWithProduct[];
   loading: boolean;
   error: string | null;
 }
@@ -197,17 +282,32 @@ export type AppAction =
   | { type: 'SET_TEMP_COUNTS'; payload: TempCount[] }
   | { type: 'UPDATE_TEMP_COUNT'; payload: TempCount }
   | { type: 'CLEAR_TEMP_COUNTS' }
+  | { type: 'SET_TEMP_PEDIDOS'; payload: TempPedido[] } 
+  | { type: 'UPDATE_TEMP_PEDIDO'; payload: TempPedido } 
+  | { type: 'CLEAR_TEMP_PEDIDOS' }
+  | { type: 'SET_TEMP_DESPERDICIO'; payload: TempDesperdicio[] }
+  | { type: 'UPDATE_TEMP_DESPERDICIO'; payload: TempDesperdicio }
+  | { type: 'CLEAR_TEMP_DESPERDICIO' }
+  | { type: 'SET_INVENTORY'; payload: InventoryWithProduct[] }
   | { type: 'RESET_STATE' };
 
 /**
  * Interfaz del contexto de la aplicación.
  */
 export interface AppContextType {
+  // Desperdicio management
+  updateTempDesperdicio: (productName: string, quantity: number) => void;
+  clearTempDesperdicio: () => void;
+  loadTempDesperdicio: () => Promise<void>;
+  saveDesperdicioReport: (entries: TempDesperdicio[]) => Promise<void>;
   // Estado
   products: Product[];
   categories: Category[];
   reports: Report[];
   tempCounts: TempCount[];
+  tempPedidos: TempPedido[];
+  tempDesperdicio: TempDesperdicio[];
+  inventory: InventoryWithProduct[];
   loading: boolean;
   error: string | null;
   dbReady: boolean; // Indica si la base de datos está inicializada
@@ -224,16 +324,31 @@ export interface AppContextType {
   updateCategory: (id: number, name: string) => Promise<void>;
   deleteCategory: (id: number) => Promise<void>;
   
-  // Funciones para reportes
-  saveReport: (tempCounts: TempCount[]) => Promise<void>;
+  // Funciones para reportes (entregas)
+  saveEntregasReport: (tempCounts: TempCount[]) => Promise<void>;
   loadReports: () => Promise<void>;
   getReportDetails: (reportId: number) => Promise<ReportDetail[]>;
   
-  // Funciones para conteo temporal
+  // Funciones para pedidos
+  savePedidosReport: (tempPedidos: TempPedido[]) => Promise<void>;
+  loadCurrentMonthPedidos: () => Promise<PedidosLoadSource>;
+  
+  // Funciones para conteo temporal (entregas)
   updateTempCount: (productName: string, quantity: number) => void;
   clearTempCounts: () => void;
   loadTempCounts: () => Promise<void>;
   saveTempCounts: () => Promise<void>;
+  
+  // Funciones para pedidos temporales
+  updateTempPedido: (productName: string, quantity: number) => void;
+  clearTempPedidos: () => void;
+  loadTempPedidos: () => Promise<void>;
+  saveTempPedidos: () => Promise<void>;
+  
+  // Funciones para balance mensual
+  loadInventory: () => Promise<void>;
+  getBalanceMensual: (year: number, month: number) => Promise<BalanceMensual[]>;
+  getMonthsWithData: () => Promise<MonthWithData[]>;
   
   // Funciones de exportación
   exportReport: (reportId: number) => Promise<string>;
