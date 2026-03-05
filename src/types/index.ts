@@ -71,7 +71,7 @@ export interface TempCount {
  * - pedidos: Lo que cocina necesita/pide al proveedor
  * - entregas: Cargamentos que el proveedor entrega
  */
-export type MovementType = 'pedidos' | 'entregas';
+export type MovementType = 'pedidos' | 'entregas' | 'desperdicio';
 
 /**
  * Registro de inventario actual de un producto.

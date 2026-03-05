@@ -81,9 +81,13 @@ export function AppProvider({ children }: AppProviderProps) {
   // Función de ejemplo: Guardar desperdicio
   const saveDesperdicioReport = async (entries: TempDesperdicio[]): Promise<void> => {
     try {
-      // Guardar desperdicios temporales y convertirlos a reporte si procede
-      await reportService.saveTempDesperdicios(entries);
-      // Después de guardar, limpiar temporales
+      // Guardar reporte definitivo de desperdicio (valida contra entregas)
+      await reportService.saveDesperdicioReport(entries);
+
+      // Recargar listados de reportes para reflejar el nuevo reporte
+      await contextValue.loadReports();
+
+      // Después de guardar, limpiar temporales en estado
       dispatch({ type: 'CLEAR_TEMP_DESPERDICIO' });
     } catch (error) {
       console.error('[AppContext] Error al guardar el reporte de desperdicio:', error);

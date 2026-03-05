@@ -13,6 +13,7 @@ export interface ProductItemProps {
   item: Product;
   quantity: number;
   isEditMode: boolean;
+  receivedQuantity?: number;
   onDecrement: () => void;
   onIncrement: () => void;
   onQuantityChange: (value: number) => void;
@@ -23,6 +24,7 @@ export const ProductItem = memo(function ProductItem({
   item, 
   quantity,
   isEditMode,
+  receivedQuantity,
   onDecrement, 
   onIncrement, 
   onQuantityChange 
@@ -45,11 +47,16 @@ export const ProductItem = memo(function ProductItem({
     onQuantityChange(newValue);
   };
 
+  const remaining = (receivedQuantity ?? 0) - quantity;
+
   return (
     <View style={styles.productItem}>
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productUnit}>({item.unit})</Text>
+        {typeof receivedQuantity === 'number' && (
+          <Text style={styles.receivedText}>Recibido: {receivedQuantity} — Restante: {Math.max(0, remaining)}</Text>
+        )}
       </View>
 
       <View style={styles.quantityContainer}>
@@ -171,5 +178,10 @@ const styles = StyleSheet.create({
   },
   inputDisabled: {
     opacity: 0.6,
+  },
+  receivedText: {
+    marginTop: 6,
+    fontSize: 14,
+    color: colors.textSecondary,
   },
 });

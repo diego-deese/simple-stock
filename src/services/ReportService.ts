@@ -245,6 +245,46 @@ class ReportService {
   }
 
   /**
+   * Guarda un reporte definitivo de desperdicio.
+   * Valida que cada cantidad de desperdicio no supere lo recibido (preferencia: conteos temporales de entregas).
+   */
+  async saveDesperdicioReport(desperdicios: TempDesperdicio[]): Promise<number> {
+    // Filtrar solo cantidades positivas
+    const valid = desperdicios.filter(d => d.quantity > 0);
+
+    if (valid.length === 0) {
+      throw new Error('No hay productos con cantidades para guardar');
+    }
+
+    // Obtener cantidades recibidas preferentemente desde tempCounts
+    const tempCounts = await tempCountRepository.getAll();
+    const entregasMap = new Map<string, number>();
+    if (tempCounts && tempCounts.length > 0) {
+      tempCounts.forEach(t => entregasMap.set(t.product_name, t.quantity));
+    } else {
+      // Fallback: totales históricos de entregas
+      const totals = await this.getTotalsByProduct('entregas');
+      totals.forEach(t => entregasMap.set(t.product_name, t.total));
+    }
+
+    // Validar que desperdicio <= recibido por producto
+    for (const d of valid) {
+      const received = entregasMap.get(d.product_name) || 0;
+      if (d.quantity > received) {
+        throw new Error(`Desperdicio de ${d.product_name} (${d.quantity}) excede lo recibido (${received})`);
+      }
+    }
+
+    // Crear el reporte definitivo de tipo 'desperdicio'
+    const reportId = await reportRepository.createWithDetails(valid, 'desperdicio');
+
+    // Limpiar temporales
+    await tempDesperdicioRepository.clearAll();
+
+    return reportId;
+  }
+
+  /**
    * Retrieves all temporary desperdicio entries.
    */
   async getTempDesperdicio(): Promise<TempDesperdicio[]> {
