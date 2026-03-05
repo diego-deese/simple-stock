@@ -114,6 +114,123 @@ const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order);
     `,
   },
+  // Migración para agregar sistema de movimientos de inventario (entradas/salidas)
+  {
+    version: 5,
+    name: 'add_inventory_movements',
+    up: `
+      -- Agregar tipo de movimiento a reportes (entrada/salida)
+      -- 'entrada' = productos que llegan al centro
+      -- 'salida' = productos que salen hacia cocina
+      ALTER TABLE reports ADD COLUMN type TEXT DEFAULT 'entrada' CHECK (type IN ('entrada', 'salida'));
+
+      -- Índice para filtrar reportes por tipo
+      CREATE INDEX IF NOT EXISTS idx_reports_type ON reports(type);
+
+      -- Tabla de inventario actual (balance calculado)
+      -- Almacena el stock actual de cada producto
+      CREATE TABLE IF NOT EXISTS inventory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        product_id INTEGER NOT NULL,
+        product_name TEXT NOT NULL,
+        current_quantity REAL DEFAULT 0,
+        last_entry_date DATETIME,
+        last_output_date DATETIME,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      );
+
+      -- Índice único por producto para evitar duplicados
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_product ON inventory(product_id);
+
+      -- Tabla temporal para salidas (similar a temp_counts pero para salidas)
+      CREATE TABLE IF NOT EXISTS temp_outputs (
+        product_name TEXT PRIMARY KEY,
+        quantity REAL NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `,
+  },
+  // Sistema de control de pedidos vs entregas
+  {
+    version: 6,
+    name: 'rename_movement_types',
+    up: `
+      -- Actualizar valores existentes en la tabla reports
+      -- 'entrada' (lo que llegaba) -> 'entregas' (entregas del proveedor)
+      -- 'salida' (lo que salía a cocina) -> 'pedidos' (lo que cocina necesita)
+      UPDATE reports SET type = 'entregas' WHERE type = 'entrada';
+      UPDATE reports SET type = 'pedidos' WHERE type = 'salida';
+
+      -- Recrear tabla reports con nuevo CHECK constraint
+      -- SQLite no permite ALTER CHECK, así que recreamos la tabla
+      
+      -- 1. Crear tabla temporal con nueva estructura
+      CREATE TABLE reports_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- 2. Copiar datos a la nueva tabla
+      INSERT INTO reports_new (id, date, type, created_at)
+      SELECT id, date, type, created_at FROM reports;
+
+      -- 3. Eliminar tabla vieja
+      DROP TABLE reports;
+
+      -- 4. Renombrar tabla nueva
+      ALTER TABLE reports_new RENAME TO reports;
+
+      -- 5. Recrear índices
+      CREATE INDEX IF NOT EXISTS idx_reports_date ON reports(date);
+      CREATE INDEX IF NOT EXISTS idx_reports_type ON reports(type);
+
+      -- Renombrar tabla temp_outputs a temp_pedidos para consistencia
+      ALTER TABLE temp_outputs RENAME TO temp_pedidos;
+    `,
+  },
+  {
+    version: 7,
+    name: 'add_desperdicio_movement_type',
+    up: `
+      -- Add desperdicio as a movement type in reports
+      -- This migration introduces a new type to the reports table for registering spoilage
+
+      CREATE TABLE reports_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos', 'desperdicio')),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Copy existing data into reports_new
+      INSERT INTO reports_new (id, date, type, created_at)
+      SELECT id, date, type, created_at FROM reports;
+
+      -- Replace the existing reports table
+      DROP TABLE reports;
+      ALTER TABLE reports_new RENAME TO reports;
+
+      -- Readd indexes for new schema
+      CREATE INDEX IF NOT EXISTS idx_reports_date ON reports(date);
+      CREATE INDEX IF NOT EXISTS idx_reports_type ON reports(type);
+    `,
+  },
+  {
+    version: 8,
+    name: 'create_temp_desperdicio_table',
+    up: `
+      -- Create temp_desperdicio table for temporary storage of spoilage data
+
+      CREATE TABLE IF NOT EXISTS temp_desperdicio (
+        product_name TEXT PRIMARY KEY,
+        quantity REAL NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `,
+  },
 ];
 
 /**
