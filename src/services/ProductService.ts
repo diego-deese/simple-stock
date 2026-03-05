@@ -140,7 +140,15 @@ class ProductService {
   async findByName(name: string): Promise<Product | null> {
     return productRepository.findByName(name);
   }
+  
+  /**
+   * Obtains products delivered in the current month grouped by category.
+   */
+  async getCurrentMonthDeliveryProductsGrouped(): Promise<ProductSection[]> {
+    return productRepository.findCurrentMonthGroupedByCategory();
+  }
 }
 
-// Exportar instancia singleton
+
+  // Exportar instancia singleton
 export const productService = new ProductService();
