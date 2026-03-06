@@ -12,8 +12,8 @@ interface BalanceItemProps {
 }
 
 // Colores para los indicadores
-const PEDIDOS_COLOR = '#FF9800';  // Naranja para pedidos
-const ENTREGAS_COLOR = '#4CAF50'; // Verde para entregas
+const PEDIDOS_COLOR = colors.warning;  // Naranja para pedidos
+const ENTREGAS_COLOR = colors.success; // Verde para entregas
 
 export const BalanceItem = memo(function BalanceItem({ item }: BalanceItemProps) {
   const isCompleto = item.diferencia >= 0;

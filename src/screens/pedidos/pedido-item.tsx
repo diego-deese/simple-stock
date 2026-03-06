@@ -19,7 +19,7 @@ export interface PedidoItemProps {
 }
 
 // Color para pedidos
-const PEDIDOS_COLOR = '#FF9800';
+const PEDIDOS_COLOR = colors.warning; // usa color del tema
 
 // Usar memo para evitar re-renders innecesarios cuando las props no cambian
 export const PedidoItem = memo(function PedidoItem({ 

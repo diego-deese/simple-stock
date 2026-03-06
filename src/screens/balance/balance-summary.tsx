@@ -10,8 +10,8 @@ interface BalanceSummaryProps {
 }
 
 // Colores
-const PEDIDOS_COLOR = '#FF9800';
-const ENTREGAS_COLOR = '#4CAF50';
+const PEDIDOS_COLOR = colors.warning;
+const ENTREGAS_COLOR = colors.success;
 
 /**
  * Componente que muestra el resumen general del balance mensual.
