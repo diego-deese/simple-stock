@@ -26,6 +26,7 @@ export function DesperdicioScreen() {
     dbReady,
     products,
     tempCounts,
+    reports,
   } = useApp();
 
   const [sections, setSections] = useState<ProductSection[]>([]);
@@ -37,10 +38,12 @@ export function DesperdicioScreen() {
 
   // Load products grouped by category when the DB is ready
   useEffect(() => {
+    // Reload grouped products when DB is ready, products list changes or
+    // when reports change (new entregas may add products to current month grouping).
     if (dbReady) {
       loadGroupedProducts();
     }
-  }, [dbReady, products]);
+  }, [dbReady, products, reports]);
 
   const loadGroupedProducts = async () => {
     try {
