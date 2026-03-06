@@ -189,6 +189,14 @@ export function AppProvider({ children }: AppProviderProps) {
     },
     updateProduct: async (id: number, name: string, unit: string, categoryId?: number | null) => {
       await productService.updateProduct(id, name, unit, categoryId);
+
+      // Reload active products so screens depending on `products` update (pedidos/entregas)
+      try {
+        const products = await productService.getActiveProducts();
+        dispatch({ type: 'SET_PRODUCTS', payload: products });
+      } catch (e) {
+        console.error('[AppContext] updateProduct: failed to reload products after update', e);
+      }
     },
     deleteProduct: async (id: number) => {
       // Desactivar producto
