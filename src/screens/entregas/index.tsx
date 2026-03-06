@@ -7,14 +7,13 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempPedido, TempCount } from '@app-types/index';
 import { colors } from '@theme/colors';
 import ScreenHeader from '@components/ScreenHeader';
+import FooterActions from '@components/FooterActions';
 import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
-import AccessibleButton from '@components/AccessibleButton';
 import { productService } from '@services/index';
 import { CategoryHeader } from '@components/CategoryHeader';
 import EntregaItem from '@screens/entregas/entrega-item';
@@ -24,8 +23,8 @@ import { PedidoConfirmationModal } from '@screens/pedidos/pedido-confirmation-mo
 
 type RegistroMode = 'pedidos' | 'entregas';
 
-const PEDIDOS_COLOR = '#FF9800';
-const ENTREGAS_COLOR = '#4CAF50';
+const PEDIDOS_COLOR = colors.warning;
+const ENTREGAS_COLOR = colors.success;
 
 const MODE_CONFIG: Record<RegistroMode, {
   label: string;
@@ -71,8 +70,7 @@ export default function EntregasScreen() {
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
   const [editModes, setEditModes] = useState({ pedidos: false, entregas: false });
   const initialPedidosLoad = useRef(false);
-  const insets = useSafeAreaInsets();
-  const bottomInset = insets.bottom || 0;
+  // safe-area insets not used here anymore (FooterActions handles footer)
 
   useEffect(() => {
     if (dbReady) {
@@ -234,7 +232,7 @@ export default function EntregasScreen() {
           renderItem={renderProductItem}
           renderSectionHeader={renderSectionHeader}
           style={styles.productList}
-          contentContainerStyle={[styles.productListContent, { paddingBottom: 20 + bottomInset }]}
+          contentContainerStyle={styles.productListContent}
           showsVerticalScrollIndicator={false}
           extraData={{ mode, isEditMode, quantityMap }}
           stickySectionHeadersEnabled={false}
@@ -245,26 +243,13 @@ export default function EntregasScreen() {
         />
       )}
 
-      <View style={[styles.footer, { paddingTop: 20 + Math.round(bottomInset / 2), paddingBottom: 20 + Math.round(bottomInset / 2) }]}> 
-        <View style={[styles.footerButtons, { paddingTop: 0 }]}> 
-          <AccessibleButton
-            title={isEditMode ? 'CANCELAR' : 'EDITAR'}
-            onPress={handleToggleEditMode}
-            variant={isEditMode ? 'danger' : 'secondary'}
-            style={styles.editButton}
-            responsiveText
-          />
-
-          <AccessibleButton
-            title="GUARDAR"
-            onPress={() => setShowConfirmModal(true)}
-            disabled={!isEditMode}
-            variant="primary"
-            style={[styles.saveButton, { backgroundColor: headerConfig.color }]}
-            responsiveText
-          />
-        </View>
-      </View>
+      <FooterActions
+        isEditMode={isEditMode}
+        onToggleEdit={handleToggleEditMode}
+        onSave={() => setShowConfirmModal(true)}
+        saveDisabled={!isEditMode}
+        saveColor={headerConfig.color}
+      />
 
       {mode === 'pedidos' ? (
         <PedidoConfirmationModal
@@ -363,21 +348,5 @@ const styles = StyleSheet.create({
   },
   productListContent: {
     paddingBottom: 20,
-  },
-  footer: {
-    padding: 20,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  editButton: {
-    flex: 1,
-  },
-  saveButton: {
-    flex: 2,
   },
 });

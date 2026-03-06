@@ -6,18 +6,17 @@ import {
   Text,
   Alert,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempDesperdicio } from '@app-types/index';
 import { colors } from '@theme/colors';
 import ScreenHeader from '@components/ScreenHeader';
 import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
-import AccessibleButton from '@components/AccessibleButton';
 import { productService, reportService } from '@services/index';
 import { CategoryHeader } from '@components/CategoryHeader';
 import ProductItemDesperdicio from '@screens/desperdicio/ProductItemDesperdicio';
 import { ConfirmationModal } from '@components/ConfirmationModal';
+import FooterActions from '@components/FooterActions';
 
 export function DesperdicioScreen() {
   const {
@@ -34,8 +33,7 @@ export function DesperdicioScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const insets = useSafeAreaInsets();
-  const bottomInset = insets.bottom || 0;
+  // safe-area insets not used here anymore (FooterActions handles footer)
 
   // Load products grouped by category when the DB is ready
   useEffect(() => {
@@ -175,7 +173,7 @@ export function DesperdicioScreen() {
           renderItem={renderProductItem}
           renderSectionHeader={renderSectionHeader}
           style={styles.productList}
-          contentContainerStyle={[styles.productListContent, { paddingBottom: 20 + bottomInset }]}
+          contentContainerStyle={styles.productListContent}
           showsVerticalScrollIndicator={false}
         />
       ) : (
@@ -184,26 +182,12 @@ export function DesperdicioScreen() {
         />
       )}
 
-      <View style={[styles.footer, { paddingTop: 20, paddingBottom: 20 + bottomInset }]}> 
-        <View style={styles.footerButtons}>
-          <AccessibleButton
-            title={isEditMode ? 'CANCELAR' : 'EDITAR'}
-            onPress={() => setIsEditMode(!isEditMode)}
-            variant={isEditMode ? 'danger' : 'secondary'}
-            style={styles.editButton}
-            responsiveText
-          />
-
-          <AccessibleButton
-            title="GUARDAR"
-            onPress={() => setShowConfirmModal(true)}
-            disabled={!isEditMode}
-            variant="primary"
-            style={styles.saveButton}
-            responsiveText
-          />
-        </View>
-      </View>
+      <FooterActions
+        isEditMode={isEditMode}
+        onToggleEdit={() => setIsEditMode(!isEditMode)}
+        onSave={() => setShowConfirmModal(true)}
+        saveDisabled={!isEditMode}
+      />
 
       <ConfirmationModal
         visible={showConfirmModal}
@@ -232,18 +216,6 @@ const styles = StyleSheet.create({
   productListContent: {
     paddingBottom: 20,
   },
-  footer: {
-    padding: 20,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  editButton: { flex: 1 },
-  saveButton: { flex: 2 },
 });
 
 export default DesperdicioScreen;

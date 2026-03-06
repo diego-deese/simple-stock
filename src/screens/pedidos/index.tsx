@@ -6,21 +6,20 @@ import {
   Alert,
   Text,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempPedido } from '@app-types/index';
 import { colors } from '@theme/colors';
 import { PedidoItem } from './pedido-item';
 import { CategoryHeader } from '@components/CategoryHeader';
 import { PedidoConfirmationModal } from './pedido-confirmation-modal';
-import AccessibleButton from '@components/AccessibleButton';
 import LoadingScreen from '@components/LoadingScreen';
 import ScreenHeader from '@components/ScreenHeader';
 import EmptyState from '@components/EmptyState';
 import { productService } from '@services/index';
+import FooterActions from '@components/FooterActions';
 
 // Color para la pantalla de pedidos
-const PEDIDOS_COLOR = '#FF9800'; // Naranja para pedidos
+const PEDIDOS_COLOR = colors.warning;
 
 export function PedidosScreen() {
   const { tempPedidos, updateTempPedido, savePedidosReport, loadCurrentMonthPedidos, loading, dbReady, products } = useApp();
@@ -31,8 +30,7 @@ export function PedidosScreen() {
   const [loadingSections, setLoadingSections] = useState(true);
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
   const initialLoadDone = useRef(false);
-  const insets = useSafeAreaInsets();
-  const bottomInset = insets.bottom || 0;
+  // safe-area insets not used here anymore (FooterActions handles footer)
 
   // Cargar productos agrupados por categoría cuando la DB esté lista o los productos cambien
   // Se reconstruyen las secciones según temporales de pedidos o catálogo
@@ -212,7 +210,7 @@ export function PedidosScreen() {
           renderItem={renderProductItem}
           renderSectionHeader={renderSectionHeader}
           style={styles.productList}
-          contentContainerStyle={[styles.productListContent, { paddingBottom: 20 + bottomInset }]}
+          contentContainerStyle={styles.productListContent}
           showsVerticalScrollIndicator={false}
           extraData={quantityMap}
           stickySectionHeadersEnabled={false}
@@ -223,26 +221,13 @@ export function PedidosScreen() {
         />
       )}
 
-      <View style={[styles.footer, { paddingTop: 20 + Math.round(bottomInset / 2), paddingBottom: 20 + Math.round(bottomInset / 2) }]}> 
-        <View style={[styles.footerButtons, { paddingTop: 0 }]}> 
-          <AccessibleButton
-            title={isEditMode ? 'CANCELAR' : 'EDITAR'}
-            onPress={() => setIsEditMode(!isEditMode)}
-            variant={isEditMode ? 'danger' : 'secondary'}
-            style={styles.editButton}
-            responsiveText
-          />
-          
-          <AccessibleButton
-            title="GUARDAR"
-            onPress={() => setShowConfirmModal(true)}
-            disabled={!isEditMode}
-            variant="primary"
-            style={styles.saveButton}
-            responsiveText
-          />
-        </View>
-      </View>
+      <FooterActions
+        isEditMode={isEditMode}
+        onToggleEdit={() => setIsEditMode(!isEditMode)}
+        onSave={() => setShowConfirmModal(true)}
+        saveDisabled={!isEditMode}
+        saveColor={PEDIDOS_COLOR}
+      />
 
       <PedidoConfirmationModal
         visible={showConfirmModal}
@@ -267,22 +252,5 @@ const styles = StyleSheet.create({
   },
   productListContent: {
     paddingBottom: 20,
-  },
-  footer: {
-    padding: 20,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  footerButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  editButton: {
-    flex: 1,
-  },
-  saveButton: {
-    flex: 2,
-    backgroundColor: PEDIDOS_COLOR,
   },
 });

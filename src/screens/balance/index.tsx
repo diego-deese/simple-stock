@@ -17,7 +17,7 @@ import { BalanceItem } from './balance-item';
 import { MonthSelector } from './month-selector';
 
 // Color para la pantalla de balance
-const BALANCE_COLOR = '#4CAF50'; // Verde para balance
+const BALANCE_COLOR = colors.success; // Verde para balance
 
 export function BalanceScreen() {
   const { dbReady, getBalanceMensual, getMonthsWithData, loadInventory } = useApp();

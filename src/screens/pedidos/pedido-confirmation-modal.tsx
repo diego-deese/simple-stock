@@ -12,7 +12,7 @@ import ModalWrapper from '@components/ModalWrapper';
 import { ConfirmationModal } from '@components/ConfirmationModal';
 
 // Color para pedidos
-const PEDIDOS_COLOR = '#FF9800';
+const PEDIDOS_COLOR = colors.warning; // usa color del tema
 
 interface PedidoConfirmationModalProps {
   visible: boolean;

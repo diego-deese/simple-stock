@@ -20,8 +20,8 @@ import ScreenHeader from '@components/ScreenHeader';
 import EmptyState from '@components/EmptyState';
 
 // Colores para los tipos de movimiento
-const ENTREGAS_COLOR = '#4CAF50';
-const PEDIDOS_COLOR = '#FF9800';
+const ENTREGAS_COLOR = colors.success;
+const PEDIDOS_COLOR = colors.warning;
 
 type FilterType = 'all' | MovementType;
 
