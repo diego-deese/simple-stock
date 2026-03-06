@@ -245,8 +245,8 @@ export default function EntregasScreen() {
         />
       )}
 
-      <View style={[styles.footer, { paddingBottom: 20 + bottomInset }]}> 
-        <View style={styles.footerButtons}>
+      <View style={[styles.footer, { paddingTop: 20 + Math.round(bottomInset / 2), paddingBottom: 20 + Math.round(bottomInset / 2) }]}> 
+        <View style={[styles.footerButtons, { paddingTop: 0 }]}> 
           <AccessibleButton
             title={isEditMode ? 'CANCELAR' : 'EDITAR'}
             onPress={handleToggleEditMode}

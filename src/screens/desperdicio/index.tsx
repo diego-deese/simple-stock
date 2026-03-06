@@ -183,7 +183,7 @@ export function DesperdicioScreen() {
         />
       )}
 
-      <View style={[styles.footer, { paddingBottom: 20 + bottomInset }]}> 
+      <View style={[styles.footer, { paddingTop: 20 + Math.round(bottomInset / 2), paddingBottom: 20 + Math.round(bottomInset / 2) }]}> 
         <AccessibleButton
           title="GUARDAR"
           onPress={() => setShowConfirmModal(true)}
