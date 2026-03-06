@@ -280,7 +280,7 @@ export default function EntregasScreen() {
           onConfirm={handleSaveReport}
           title="Confirmar reporte de entregas"
           subtitle="Se registrarán los siguientes productos como entregas:"
-          confirmButtonTitle="Guardar entregas"
+          confirmButtonTitle="Guardar"
           quantityColor={ENTREGAS_COLOR}
         />
       )}

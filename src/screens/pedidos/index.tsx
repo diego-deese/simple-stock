@@ -32,11 +32,51 @@ export function PedidosScreen() {
   const initialLoadDone = useRef(false);
 
   // Cargar productos agrupados por categoría cuando la DB esté lista o los productos cambien
+  // Se reconstruyen las secciones según temporales de pedidos o catálogo
   useEffect(() => {
-    if (dbReady) {
+    if (!dbReady) return;
+
+    const positivePedidos = tempPedidos.filter((p: TempPedido) => p.quantity > 0);
+
+    if (positivePedidos.length > 0) {
+      // Mostrar solo los productos incluidos en los pedidos del mes (lista de la compra)
+      const byCategory = new Map<number | null, Product[]>();
+
+      positivePedidos.forEach(p => {
+        const prod = products.find(pr => pr.name === p.product_name);
+        if (prod) {
+          const key = prod.category_id ?? null;
+          const arr = byCategory.get(key) || [];
+          arr.push(prod);
+          byCategory.set(key, arr);
+        } else {
+          // Producto no encontrado en catálogo (posible desactivado): crear un placeholder
+          const placeholder: Product = {
+            id: -1,
+            name: p.product_name,
+            unit: '',
+            active: false,
+            category_id: null,
+          };
+          const arr = byCategory.get(null) || [];
+          arr.push(placeholder);
+          byCategory.set(null, arr);
+        }
+      });
+
+      const grouped = Array.from(byCategory.entries()).map(([catId, list]) => ({
+        title: list[0].category_name || 'Sin categoría',
+        categoryId: catId,
+        data: list,
+      }));
+
+      setSections(grouped);
+      setLoadingSections(false);
+    } else {
+      // Si no hay pedidos temporales, mostrar todo el catálogo activo
       loadGroupedProducts();
     }
-  }, [dbReady, products]);
+  }, [dbReady, products, tempPedidos]);
 
   // Cargar pedidos existentes del mes actual al montar el componente
   useEffect(() => {
@@ -48,18 +88,11 @@ export function PedidosScreen() {
 
   const loadExistingPedidos = async () => {
     try {
-      const countBefore = tempPedidos.filter((pedido: TempPedido) => pedido.quantity > 0).length;
-      await loadCurrentMonthPedidos();
-      
-      // Detectar si se cargaron valores (asumimos que si hay más valores después, se copiaron del mes anterior)
-      setTimeout(() => {
-        const countAfter = tempPedidos.filter((pedido: TempPedido) => pedido.quantity > 0).length;
-        if (countAfter > countBefore && countBefore === 0) {
-          setCopiedFromPrevious(true);
-          // Ocultar mensaje después de 5 segundos
-          setTimeout(() => setCopiedFromPrevious(false), 5000);
-        }
-      }, 100);
+      const source = await loadCurrentMonthPedidos();
+      if (source === 'previous') {
+        setCopiedFromPrevious(true);
+        setTimeout(() => setCopiedFromPrevious(false), 5000);
+      }
     } catch (error) {
       console.error('[Pedidos] Error al cargar pedidos del mes:', error);
     }
