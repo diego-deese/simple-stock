@@ -19,7 +19,7 @@ import EmptyState from '@components/EmptyState';
 
 export function Categories() {
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { categories, addCategory, updateCategory, deleteCategory, loading } = useApp();
+  const { categories, addCategory, updateCategory, deleteCategory, loading, loadCategories } = useApp();
   
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -61,9 +61,13 @@ export function Categories() {
       
       if (editingCategory) {
         await updateCategory(editingCategory.id, categoryName.trim());
+        // reload categories to ensure UI updates
+        await loadCategories();
         Alert.alert('Éxito', 'Categoría actualizada correctamente');
       } else {
         await addCategory(categoryName.trim());
+        // reload categories to ensure UI updates
+        await loadCategories();
         Alert.alert('Éxito', 'Categoría agregada correctamente');
       }
       
@@ -85,14 +89,16 @@ export function Categories() {
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCategory(category.id);
-              Alert.alert('Éxito', 'Categoría eliminada correctamente');
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar la categoría');
+            onPress: async () => {
+              try {
+                await deleteCategory(category.id);
+                // reload categories to ensure UI updates
+                await loadCategories();
+                Alert.alert('Éxito', 'Categoría eliminada correctamente');
+              } catch (error) {
+                Alert.alert('Error', 'No se pudo eliminar la categoría');
+              }
             }
-          }
         }
       ]
     );
