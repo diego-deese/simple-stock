@@ -320,6 +320,17 @@ export function AppProvider({ children }: AppProviderProps) {
     // Reportes (entregas)
     saveEntregasReport: async (tempCounts: TempCount[]) => {
       await reportService.saveEntregasReport(tempCounts);
+      // After saving entregas, refresh reports and inventory (balance mensual)
+      try {
+        await contextValue.loadReports();
+      } catch (e) {
+        console.error('[AppContext] saveEntregasReport: failed to reload reports', e);
+      }
+      try {
+        await contextValue.loadInventory();
+      } catch (e) {
+        console.error('[AppContext] saveEntregasReport: failed to reload inventory', e);
+      }
     },
     loadReports: async () => {
       const reports = await reportService.getAllReports();
@@ -332,6 +343,17 @@ export function AppProvider({ children }: AppProviderProps) {
     // Pedidos
     savePedidosReport: async (tempPedidos: TempPedido[]) => {
       await reportService.savePedidosReport(tempPedidos);
+      // After saving pedidos, refresh reports and inventory (balance mensual)
+      try {
+        await contextValue.loadReports();
+      } catch (e) {
+        console.error('[AppContext] savePedidosReport: failed to reload reports', e);
+      }
+      try {
+        await contextValue.loadInventory();
+      } catch (e) {
+        console.error('[AppContext] savePedidosReport: failed to reload inventory', e);
+      }
     },
     loadCurrentMonthPedidos: async () => {
       try {
