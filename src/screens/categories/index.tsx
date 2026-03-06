@@ -32,6 +32,15 @@ export function Categories() {
     }
   }, [isAuthenticated, authLoading]);
 
+  // Debug: log categories when they change to verify UI receives updated list
+  useEffect(() => {
+    try {
+      console.debug('[CategoriesScreen] categories changed:', categories.map((c: any) => ({ id: c.id, name: c.name, active: c.active })));
+    } catch (e) {
+      // ignore
+    }
+  }, [categories]);
+
   const openAddModal = () => {
     setEditingCategory(null);
     setCategoryName('');
@@ -132,6 +141,7 @@ export function Categories() {
 
         <FlatList
           data={categories}
+          extraData={categories}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <CategoryItem

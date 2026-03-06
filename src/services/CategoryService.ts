@@ -85,7 +85,22 @@ class CategoryService {
       throw new Error('Categoría no encontrada');
     }
 
+    // Debug: log before and after soft-delete to help trace issues where UI
+    // doesn't reflect the change.
+    try {
+      console.debug('[CategoryService] deactivateCategory: before softDelete', { id, existing });
+    } catch (e) {
+      // ignore logging errors
+    }
+
     await categoryRepository.softDelete(id);
+
+    try {
+      const after = await categoryRepository.findById(id);
+      console.debug('[CategoryService] deactivateCategory: after softDelete', { id, after });
+    } catch (e) {
+      console.error('[CategoryService] deactivateCategory: failed to read back category', e);
+    }
   }
 
   /**
