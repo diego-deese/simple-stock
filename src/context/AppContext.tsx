@@ -215,12 +215,19 @@ export function AppProvider({ children }: AppProviderProps) {
     },
     addCategory: async (name: string) => {
       await categoryService.createCategory(name);
+      // recargar categorías en estado para actualizar la UI
+      const categories = await categoryService.getAllCategories();
+      dispatch({ type: 'SET_CATEGORIES', payload: categories });
     },
     updateCategory: async (id: number, name: string) => {
       await categoryService.updateCategory(id, name);
+      const categories = await categoryService.getAllCategories();
+      dispatch({ type: 'SET_CATEGORIES', payload: categories });
     },
     deleteCategory: async (id: number) => {
       await categoryService.deactivateCategory(id);
+      const categories = await categoryService.getAllCategories();
+      dispatch({ type: 'SET_CATEGORIES', payload: categories });
     },
 
     // Reportes (entregas)
