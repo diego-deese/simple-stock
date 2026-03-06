@@ -6,6 +6,7 @@ import {
   Text,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempDesperdicio } from '@app-types/index';
 import { colors } from '@theme/colors';
@@ -32,6 +33,8 @@ export function DesperdicioScreen() {
   const [loadingSections, setLoadingSections] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom || 0;
 
   // Load products grouped by category when the DB is ready
   useEffect(() => {
@@ -171,7 +174,7 @@ export function DesperdicioScreen() {
           renderItem={renderProductItem}
           renderSectionHeader={renderSectionHeader}
           style={styles.productList}
-          contentContainerStyle={styles.productListContent}
+          contentContainerStyle={[styles.productListContent, { paddingBottom: 20 + bottomInset }]}
           showsVerticalScrollIndicator={false}
         />
       ) : (
@@ -180,7 +183,7 @@ export function DesperdicioScreen() {
         />
       )}
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 20 + bottomInset }]}> 
         <AccessibleButton
           title="GUARDAR"
           onPress={() => setShowConfirmModal(true)}
