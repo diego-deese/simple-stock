@@ -38,10 +38,22 @@ class CategoryService {
       throw new Error('El nombre de la categoría es requerido');
     }
 
-    // Verificar duplicados
-    const exists = await categoryRepository.existsByName(trimmedName);
-    if (exists) {
-      throw new Error(`Ya existe una categoría con el nombre "${trimmedName}"`);
+    // Verificar si ya existe una categoría con ese nombre
+    const existing = await categoryRepository.findByName(trimmedName);
+    if (existing) {
+      if (existing.active) {
+        // Activa y existente -> error de duplicado
+        throw new Error(`Ya existe una categoría con el nombre "${trimmedName}"`);
+      } else {
+        // Existe pero inactiva: reactivar y devolver su id
+        try {
+          console.debug('[CategoryService] createCategory: reactivating existing inactive category', { id: existing.id, name: trimmedName });
+        } catch (e) {
+          // ignore logging errors
+        }
+        await categoryRepository.restore(existing.id);
+        return existing.id;
+      }
     }
 
     return categoryRepository.create(trimmedName);
