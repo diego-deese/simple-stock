@@ -148,12 +148,14 @@ export function History() {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScrollContent}
+          nestedScrollEnabled
+          directionalLockEnabled
         >
           <AccessibleButton
             title={`Todos (${counts.all})`}
             onPress={() => setActiveFilter('all')}
             style={[
-              styles.filterButton,
+              styles.filterButtonSmall,
               styles.filterButtonHorizontal,
               activeFilter === 'all' && styles.filterButtonActive,
             ]}
@@ -165,7 +167,7 @@ export function History() {
             title={`📦 Entregas (${counts.entregas})`}
             onPress={() => setActiveFilter('entregas')}
             style={[
-              styles.filterButton,
+              styles.filterButtonSmall,
               styles.filterButtonHorizontal,
               activeFilter === 'entregas' && styles.filterButtonEntregas,
             ]}
@@ -177,7 +179,7 @@ export function History() {
             title={`📋 Pedidos (${counts.pedidos})`}
             onPress={() => setActiveFilter('pedidos')}
             style={[
-              styles.filterButton,
+              styles.filterButtonSmall,
               styles.filterButtonHorizontal,
               activeFilter === 'pedidos' && styles.filterButtonPedidos,
             ]}
@@ -189,7 +191,7 @@ export function History() {
             title={`♻️ Desperdicio (${counts.desperdicio})`}
             onPress={() => setActiveFilter('desperdicio')}
             style={[
-              styles.filterButton,
+              styles.filterButtonSmall,
               styles.filterButtonHorizontal,
               activeFilter === 'desperdicio' && styles.filterButtonDesperdicio,
             ]}
@@ -325,6 +327,15 @@ const styles = StyleSheet.create({
   },
   filterButtonHorizontal: {
     marginRight: 8,
+  },
+  filterButtonSmall: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: colors.backgroundDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 120,
   },
   filterButton: {
     flex: 1,
