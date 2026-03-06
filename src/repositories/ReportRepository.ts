@@ -83,6 +83,25 @@ class ReportRepository extends BaseRepository<Report> {
   }
 
   /**
+   * Obtiene el último detalle de pedido (por fecha del reporte) para un producto.
+   * Devuelve null si no existe.
+   */
+  async getLatestPedidoDetail(productName: string): Promise<ReportDetail | null> {
+    const db = this.getDb();
+    const row = await db.getFirstAsync<ReportDetail>(
+      `SELECT rd.id, rd.report_id, rd.product_name, rd.quantity, rd.created_at
+       FROM report_details rd
+       JOIN reports r ON rd.report_id = r.id
+       WHERE rd.product_name = ? AND r.type = 'pedidos'
+       ORDER BY r.date DESC
+       LIMIT 1`,
+      [productName]
+    );
+
+    return row || null;
+  }
+
+  /**
    * Obtiene un reporte con todos sus detalles.
    */
   async findByIdWithDetails(reportId: number): Promise<ReportWithDetails | null> {
