@@ -78,6 +78,31 @@ export function AppProvider({ children }: AppProviderProps) {
   const [dbReady, setDbReady] = useState(false);
   const initStarted = useRef(false);
 
+  // Helper: patch products in memory when a category changes so UI updates
+  const patchProductsForCategoryChange = (categoryId: number, categoryName: string | null) => {
+    try {
+      const updated = state.products.map((p: Product) => {
+        if (p.category_id === categoryId) {
+          return { ...p, category_id: categoryName ? categoryId : null, category_name: categoryName ?? null } as Product;
+        }
+        return p;
+      });
+      dispatch({ type: 'SET_PRODUCTS', payload: updated });
+    } catch (e) {
+      console.error('[AppContext] patchProductsForCategoryChange failed', e);
+    }
+  };
+
+  // Helper: patch a single product in state (useful after product edit)
+  const patchSingleProductInState = (product: Product) => {
+    try {
+      const updated = state.products.map((p: Product) => (p.id === product.id ? product : p));
+      dispatch({ type: 'SET_PRODUCTS', payload: updated });
+    } catch (e) {
+      console.error('[AppContext] patchSingleProductInState failed', e);
+    }
+  };
+
   // Función de ejemplo: Guardar desperdicio
   const saveDesperdicioReport = async (entries: TempDesperdicio[]): Promise<void> => {
     try {
@@ -192,8 +217,14 @@ export function AppProvider({ children }: AppProviderProps) {
 
       // Reload active products so screens depending on `products` update (pedidos/entregas)
       try {
-        const products = await productService.getActiveProducts();
-        dispatch({ type: 'SET_PRODUCTS', payload: products });
+        // Instead of reloading all products, fetch the single updated product and patch state
+        const updated = await productService.getProductById(id);
+        if (updated) {
+          patchSingleProductInState(updated);
+        } else {
+          const products = await productService.getActiveProducts();
+          dispatch({ type: 'SET_PRODUCTS', payload: products });
+        }
       } catch (e) {
         console.error('[AppContext] updateProduct: failed to reload products after update', e);
       }
@@ -235,17 +266,29 @@ export function AppProvider({ children }: AppProviderProps) {
       }
     },
     addCategory: async (name: string) => {
-      await categoryService.createCategory(name);
-      // recargar categorías en estado para actualizar la UI
+      // createCategory may reactivate an existing inactive category; it returns id
+      const createdId = await categoryService.createCategory(name);
+
+      // reload categories in state
       const categories = await categoryService.getAllCategories();
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
 
-      // ensure product list reflects possible reactivated category
+      // If a category was reactivated or created with id, and there are products
+      // that belonged to it, patch them in memory instead of reloading everything.
       try {
+        // find the resulting category object
+        const resulting = categories.find(c => c.id === createdId);
+        if (resulting) {
+          patchProductsForCategoryChange(resulting.id, resulting.name);
+        } else {
+          // fallback: reload products
+          const products = await productService.getActiveProducts();
+          dispatch({ type: 'SET_PRODUCTS', payload: products });
+        }
+      } catch (e) {
+        console.error('[AppContext] addCategory: patch/reactivation failed, reloading products', e);
         const products = await productService.getActiveProducts();
         dispatch({ type: 'SET_PRODUCTS', payload: products });
-      } catch (e) {
-        console.error('[AppContext] addCategory: failed to reload products', e);
       }
     },
     updateCategory: async (id: number, name: string) => {
@@ -253,13 +296,8 @@ export function AppProvider({ children }: AppProviderProps) {
       const categories = await categoryService.getAllCategories();
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
 
-      // reload products to pick up changed category name
-      try {
-        const products = await productService.getActiveProducts();
-        dispatch({ type: 'SET_PRODUCTS', payload: products });
-      } catch (e) {
-        console.error('[AppContext] updateCategory: failed to reload products', e);
-      }
+      // patch products in memory to update category_name for products with this category
+      patchProductsForCategoryChange(id, name);
     },
     deleteCategory: async (id: number) => {
       await categoryService.deactivateCategory(id);
@@ -267,14 +305,8 @@ export function AppProvider({ children }: AppProviderProps) {
       const categories = await categoryService.getAllCategories();
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
 
-      // reload products so those that belonged to the deactivated category
-      // will now show as uncategorized in lists
-      try {
-        const products = await productService.getActiveProducts();
-        dispatch({ type: 'SET_PRODUCTS', payload: products });
-      } catch (e) {
-        console.error('[AppContext] deleteCategory: failed to reload products', e);
-      }
+      // patch products in memory: remove category_name for products that had this id
+      patchProductsForCategoryChange(id, null);
 
       // Debug: verify the category active flag in DB after soft-delete
       try {
