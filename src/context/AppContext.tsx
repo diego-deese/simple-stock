@@ -226,23 +226,55 @@ export function AppProvider({ children }: AppProviderProps) {
         // ignore logging errors
       }
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
+      // Also refresh products so views that include category_name react to changes
+      try {
+        const products = await productService.getActiveProducts();
+        dispatch({ type: 'SET_PRODUCTS', payload: products });
+      } catch (e) {
+        console.error('[AppContext] loadCategories: failed to reload products after categories changed', e);
+      }
     },
     addCategory: async (name: string) => {
       await categoryService.createCategory(name);
       // recargar categorías en estado para actualizar la UI
       const categories = await categoryService.getAllCategories();
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
+
+      // ensure product list reflects possible reactivated category
+      try {
+        const products = await productService.getActiveProducts();
+        dispatch({ type: 'SET_PRODUCTS', payload: products });
+      } catch (e) {
+        console.error('[AppContext] addCategory: failed to reload products', e);
+      }
     },
     updateCategory: async (id: number, name: string) => {
       await categoryService.updateCategory(id, name);
       const categories = await categoryService.getAllCategories();
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
+
+      // reload products to pick up changed category name
+      try {
+        const products = await productService.getActiveProducts();
+        dispatch({ type: 'SET_PRODUCTS', payload: products });
+      } catch (e) {
+        console.error('[AppContext] updateCategory: failed to reload products', e);
+      }
     },
     deleteCategory: async (id: number) => {
       await categoryService.deactivateCategory(id);
       // Reload categories into state
       const categories = await categoryService.getAllCategories();
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
+
+      // reload products so those that belonged to the deactivated category
+      // will now show as uncategorized in lists
+      try {
+        const products = await productService.getActiveProducts();
+        dispatch({ type: 'SET_PRODUCTS', payload: products });
+      } catch (e) {
+        console.error('[AppContext] deleteCategory: failed to reload products', e);
+      }
 
       // Debug: verify the category active flag in DB after soft-delete
       try {
