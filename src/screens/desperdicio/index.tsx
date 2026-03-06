@@ -146,7 +146,7 @@ export function DesperdicioScreen() {
         }}
       />
     );
-  }, [quantityMap, updateTempDesperdicio, receivedMap]);
+  }, [quantityMap, updateTempDesperdicio, receivedMap, isEditMode]);
 
   const renderSectionHeader = useCallback(({ section }: { section: ProductSection }) => (
     <CategoryHeader title={section.title} />
@@ -174,6 +174,7 @@ export function DesperdicioScreen() {
           renderSectionHeader={renderSectionHeader}
           style={styles.productList}
           contentContainerStyle={styles.productListContent}
+          extraData={{ isEditMode, quantityMap, receivedMap }}
           showsVerticalScrollIndicator={false}
         />
       ) : (
