@@ -10,7 +10,7 @@ import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempPedido } from '@app-types/index';
 import { colors } from '@theme/colors';
 import { PedidoItem } from './pedido-item';
-import { CategoryHeader } from '../home/category-header';
+import { CategoryHeader } from '@components/CategoryHeader';
 import { PedidoConfirmationModal } from './pedido-confirmation-modal';
 import AccessibleButton from '@components/AccessibleButton';
 import LoadingScreen from '@components/LoadingScreen';

@@ -9,6 +9,7 @@ import { TempPedido } from '@app-types/index';
 import { colors } from '@theme/colors';
 import AccessibleButton from '@components/AccessibleButton';
 import ModalWrapper from '@components/ModalWrapper';
+import { ConfirmationModal } from '@components/ConfirmationModal';
 
 // Color para pedidos
 const PEDIDOS_COLOR = '#FF9800';
@@ -21,53 +22,27 @@ interface PedidoConfirmationModalProps {
   onConfirm: () => void;
 }
 
-export function PedidoConfirmationModal({ 
-  visible, 
-  tempPedidos, 
-  saving, 
-  onCancel, 
-  onConfirm 
+export function PedidoConfirmationModal({
+  visible,
+  tempPedidos,
+  saving,
+  onCancel,
+  onConfirm,
 }: PedidoConfirmationModalProps) {
   const pedidosToShow = tempPedidos.filter((pedido: TempPedido) => pedido.quantity > 0);
 
   return (
-    <ModalWrapper visible={visible} maxHeight="70%">
-      <Text style={styles.modalTitle}>Confirmar Pedidos</Text>
-      
-      <Text style={styles.modalSubtitle}>
-        Se registrarán los siguientes pedidos para el proveedor:
-      </Text>
-      
-      <FlatList
-        data={pedidosToShow}
-        keyExtractor={(item) => item.product_name}
-        style={styles.modalList}
-        renderItem={({ item }) => (
-          <View style={styles.modalItem}>
-            <Text style={styles.modalItemName}>{item.product_name}</Text>
-            <Text style={styles.modalItemQuantity}>{item.quantity}</Text>
-          </View>
-        )}
-      />
-      
-      <View style={styles.modalButtons}>
-        <AccessibleButton
-          title="Cancelar"
-          onPress={onCancel}
-          disabled={saving}
-          variant="secondary"
-          style={styles.modalButton}
-        />
-        
-        <AccessibleButton
-          title="Guardar Pedidos"
-          onPress={onConfirm}
-          loading={saving}
-          variant="primary"
-          style={styles.saveButton}
-        />
-      </View>
-    </ModalWrapper>
+    <ConfirmationModal
+      visible={visible}
+      items={pedidosToShow}
+      saving={saving}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      title="Confirmar Pedidos"
+      subtitle="Se registrarán los siguientes pedidos para el proveedor:"
+      confirmButtonTitle="Guardar"
+      quantityColor={PEDIDOS_COLOR}
+    />
   );
 }
 

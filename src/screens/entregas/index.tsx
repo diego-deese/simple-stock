@@ -15,10 +15,10 @@ import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
 import AccessibleButton from '@components/AccessibleButton';
 import { productService } from '@services/index';
-import { CategoryHeader } from '@screens/home/category-header';
-import { ProductItem } from '@screens/home/product-item';
+import { CategoryHeader } from '@components/CategoryHeader';
+import EntregaItem from '@screens/entregas/entrega-item';
 import { PedidoItem } from '@screens/pedidos/pedido-item';
-import { ConfirmationModal } from '@screens/home/confirmation-modal';
+  import { ConfirmationModal } from '@components/ConfirmationModal';
 import { PedidoConfirmationModal } from '@screens/pedidos/pedido-confirmation-modal';
 
 type RegistroMode = 'pedidos' | 'entregas';
@@ -48,7 +48,7 @@ const MODE_CONFIG: Record<RegistroMode, {
   },
 };
 
-export function RegistroScreen() {
+export default function EntregasScreen() {
   const {
     tempPedidos,
     updateTempPedido,
@@ -71,14 +71,12 @@ export function RegistroScreen() {
   const [editModes, setEditModes] = useState({ pedidos: false, entregas: false });
   const initialPedidosLoad = useRef(false);
 
-  // Cargar productos agrupados por categoría cuando la DB esté lista o los productos cambien
   useEffect(() => {
     if (dbReady) {
       loadGroupedProducts();
     }
   }, [dbReady, products]);
 
-  // Cargar pedidos existentes del mes actual una sola vez
   useEffect(() => {
     if (dbReady && !initialPedidosLoad.current) {
       initialPedidosLoad.current = true;
@@ -86,7 +84,6 @@ export function RegistroScreen() {
     }
   }, [dbReady]);
 
-  // Cerrar modales cuando cambia el modo para evitar incongruencias
   useEffect(() => {
     setShowConfirmModal(false);
     setSavingReport(false);
@@ -98,7 +95,7 @@ export function RegistroScreen() {
       const groupedProducts = await productService.getActiveProductsGrouped();
       setSections(groupedProducts);
     } catch (error) {
-      console.error('[RegistroScreen] Error al cargar productos agrupados:', error);
+      console.error('[EntregasScreen] Error al cargar productos agrupados:', error);
     } finally {
       setLoadingSections(false);
     }
@@ -109,7 +106,7 @@ export function RegistroScreen() {
       const source = await loadCurrentMonthPedidos();
       setCopiedFromPrevious(source === 'previous');
     } catch (error) {
-      console.error('[RegistroScreen] Error al cargar pedidos del mes:', error);
+      console.error('[EntregasScreen] Error al cargar pedidos del mes:', error);
       setCopiedFromPrevious(false);
     }
   };
@@ -144,39 +141,23 @@ export function RegistroScreen() {
         .filter(entry => entry.quantity > 0);
 
       if (entries.length === 0) {
-        Alert.alert(
-          'Sin datos',
-          'No hay cantidades registradas para guardar.',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Sin datos', 'No hay cantidades registradas para guardar.', [{ text: 'OK' }]);
         return;
       }
 
       if (mode === 'pedidos') {
         await savePedidosReport(entries);
         setCopiedFromPrevious(false);
-        Alert.alert(
-          'Pedido Guardado',
-          `Se registraron ${entries.length} productos en el pedido del mes.`,
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Pedido Guardado', `Se registraron ${entries.length} productos en el pedido del mes.`, [{ text: 'OK' }]);
       } else {
         await saveEntregasReport(entries);
-        Alert.alert(
-          'Entregas Guardadas',
-          `Se registraron ${entries.length} productos en las entregas.`,
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Entregas Guardadas', `Se registraron ${entries.length} productos en las entregas.`, [{ text: 'OK' }]);
       }
 
       setShowConfirmModal(false);
       setEditMode(false);
     } catch (error) {
-      Alert.alert(
-        'Error',
-        'No se pudo guardar la información. Intenta de nuevo.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'No se pudo guardar la información. Intenta de nuevo.', [{ text: 'OK' }]);
     } finally {
       setSavingReport(false);
     }
@@ -193,19 +174,20 @@ export function RegistroScreen() {
           isEditMode={isEditMode}
           onDecrement={() => updateTempPedido(item.name, Math.max(0, quantity - 1))}
           onIncrement={() => updateTempPedido(item.name, quantity + 1)}
-          onQuantityChange={(value) => updateTempPedido(item.name, value)}
+          onQuantityChange={(value: number) => updateTempPedido(item.name, value)}
         />
       );
     }
 
+    // entregas
     return (
-      <ProductItem
+      <EntregaItem
         item={item}
         quantity={quantity}
         isEditMode={isEditMode}
         onDecrement={() => updateTempCount(item.name, Math.max(0, quantity - 1))}
         onIncrement={() => updateTempCount(item.name, quantity + 1)}
-        onQuantityChange={(value) => updateTempCount(item.name, value)}
+        onQuantityChange={(value: number) => updateTempCount(item.name, value)}
       />
     );
   }, [mode, quantityMap, isEditMode, updateTempPedido, updateTempCount]);
@@ -292,10 +274,14 @@ export function RegistroScreen() {
       ) : (
         <ConfirmationModal
           visible={showConfirmModal}
-          tempCounts={tempCounts}
+          items={tempCounts}
           saving={savingReport}
           onCancel={() => setShowConfirmModal(false)}
           onConfirm={handleSaveReport}
+          title="Confirmar reporte de entregas"
+          subtitle="Se registrarán los siguientes productos como entregas:"
+          confirmButtonTitle="Guardar entregas"
+          quantityColor={ENTREGAS_COLOR}
         />
       )}
     </View>
@@ -392,5 +378,3 @@ const styles = StyleSheet.create({
     flex: 2,
   },
 });
-
-export default RegistroScreen;

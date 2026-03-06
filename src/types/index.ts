@@ -4,7 +4,7 @@
 
 /**
  * Categoría de productos.
- * Permite agrupar productos en la pantalla de registro.
+ * Permite agrupar productos en la pantalla de entregas.
  */
 export interface Category {
   id: number;
@@ -97,11 +97,11 @@ export interface InventoryWithProduct extends Inventory {
 }
 
 /**
- * Pedido temporal durante el registro (similar a TempCount).
+ * Pedido temporal durante las entregas (similar a TempCount).
  */
 
 /**
- * Desperdicio temporal durante el registro (similar a TempPedido).
+ * Desperdicio temporal durante las entregas (similar a TempPedido).
  */
 export interface TempDesperdicio {
   product_name: string;
@@ -183,7 +183,7 @@ export interface UpdateCategoryDTO {
 
 /**
  * Sección de productos agrupados por categoría.
- * Usado para renderizar SectionList en la pantalla de registro.
+ * Usado para renderizar SectionList en la pantalla de entregas.
  */
 export interface ProductSection {
   title: string;
