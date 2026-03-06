@@ -33,6 +33,7 @@ export function DesperdicioScreen() {
   const [loadingSections, setLoadingSections] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom || 0;
 
@@ -129,7 +130,7 @@ export function DesperdicioScreen() {
         item={item}
         quantity={quantity}
         receivedQuantity={received}
-        isEditMode={true}
+        isEditMode={isEditMode}
         onDecrement={() => updateTempDesperdicio(item.name, Math.max(0, quantity - 1))}
         onIncrement={() => {
           if (received > 0 && quantity + 1 > received) {
@@ -184,12 +185,24 @@ export function DesperdicioScreen() {
       )}
 
       <View style={[styles.footer, { paddingTop: 20, paddingBottom: 20 + bottomInset }]}> 
-        <AccessibleButton
-          title="GUARDAR"
-          onPress={() => setShowConfirmModal(true)}
-          variant="primary"
-          style={styles.saveButton}
-        />
+        <View style={styles.footerButtons}>
+          <AccessibleButton
+            title={isEditMode ? 'CANCELAR' : 'EDITAR'}
+            onPress={() => setIsEditMode(!isEditMode)}
+            variant={isEditMode ? 'danger' : 'secondary'}
+            style={styles.editButton}
+            responsiveText
+          />
+
+          <AccessibleButton
+            title="GUARDAR"
+            onPress={() => setShowConfirmModal(true)}
+            disabled={!isEditMode}
+            variant="primary"
+            style={styles.saveButton}
+            responsiveText
+          />
+        </View>
       </View>
 
       <ConfirmationModal
@@ -225,9 +238,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  saveButton: {
-    flex: 1,
+  footerButtons: {
+    flexDirection: 'row',
+    gap: 12,
   },
+  editButton: { flex: 1 },
+  saveButton: { flex: 2 },
 });
 
 export default DesperdicioScreen;
