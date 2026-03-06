@@ -320,6 +320,8 @@ export function AppProvider({ children }: AppProviderProps) {
     // Reportes (entregas)
     saveEntregasReport: async (tempCounts: TempCount[]) => {
       await reportService.saveEntregasReport(tempCounts);
+      // Clear temporary counts in context so UI resets to zero immediately
+      dispatch({ type: 'SET_TEMP_COUNTS', payload: [] });
       // After saving entregas, refresh reports and inventory (balance mensual)
       try {
         await contextValue.loadReports();
@@ -343,6 +345,8 @@ export function AppProvider({ children }: AppProviderProps) {
     // Pedidos
     savePedidosReport: async (tempPedidos: TempPedido[]) => {
       await reportService.savePedidosReport(tempPedidos);
+      // Clear temporary pedidos in context so UI resets to zero immediately
+      dispatch({ type: 'SET_TEMP_PEDIDOS', payload: [] });
       // After saving pedidos, refresh reports and inventory (balance mensual)
       try {
         await contextValue.loadReports();
