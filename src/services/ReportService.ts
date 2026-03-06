@@ -178,6 +178,13 @@ class ReportService {
   }
 
   /**
+   * Obtiene el último detalle de pedido (más reciente) para un producto.
+   */
+  async getLatestPedidoDetail(productName: string): Promise<ReportDetail | null> {
+    return reportRepository.getLatestPedidoDetail(productName);
+  }
+
+  /**
    * Obtiene el total histórico de un producto.
    */
   async getProductTotalHistory(productName: string): Promise<number> {
@@ -333,6 +340,20 @@ class ReportService {
    */
   async hasPendingPedidos(): Promise<boolean> {
     return tempPedidosRepository.hasPendingPedidos();
+  }
+
+  /**
+   * Elimina el pedido temporal de un producto específico.
+   */
+  async removeTempPedido(productName: string): Promise<void> {
+    await tempPedidosRepository.removeByProductName(productName);
+  }
+
+  /**
+   * Elimina el conteo temporal de un producto específico (entregas).
+   */
+  async removeTempCount(productName: string): Promise<void> {
+    await tempCountRepository.removeByProductName(productName);
   }
 }
 
