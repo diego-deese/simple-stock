@@ -345,14 +345,20 @@ export function AppProvider({ children }: AppProviderProps) {
     // Pedidos
     savePedidosReport: async (tempPedidos: TempPedido[]) => {
       await reportService.savePedidosReport(tempPedidos);
-      // Clear temporary pedidos in context so UI resets to zero immediately
-      dispatch({ type: 'SET_TEMP_PEDIDOS', payload: [] });
-      // After saving pedidos, refresh reports and inventory (balance mensual)
+      // After saving pedidos, reload the current month's pedidos into temporals
+      // so the Pedidos screen continues showing the month's shopping list.
       try {
         await contextValue.loadReports();
       } catch (e) {
         console.error('[AppContext] savePedidosReport: failed to reload reports', e);
       }
+
+      try {
+        await contextValue.loadCurrentMonthPedidos();
+      } catch (e) {
+        console.error('[AppContext] savePedidosReport: failed to reload current month pedidos', e);
+      }
+
       try {
         await contextValue.loadInventory();
       } catch (e) {
