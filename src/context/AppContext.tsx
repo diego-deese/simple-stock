@@ -215,18 +215,28 @@ export function AppProvider({ children }: AppProviderProps) {
     updateProduct: async (id: number, name: string, unit: string, categoryId?: number | null) => {
       await productService.updateProduct(id, name, unit, categoryId);
 
-      // Reload active products so screens depending on `products` update (pedidos/entregas)
+      // Update the product in memory to reflect category changes immediately.
       try {
-        // Instead of reloading all products, fetch the single updated product and patch state
-        const updated = await productService.getProductById(id);
-        if (updated) {
-          patchSingleProductInState(updated);
+        // Find existing product in state
+        const existing = state.products.find(p => p.id === id);
+        const categoryObj = state.categories.find(c => c.id === categoryId) || null;
+
+        if (existing) {
+          const updatedProduct: Product = {
+            ...existing,
+            name,
+            unit,
+            category_id: categoryId ?? null,
+            category_name: categoryObj ? categoryObj.name : undefined,
+          };
+          patchSingleProductInState(updatedProduct);
         } else {
+          // If we don't have it in state, fallback to reloading products
           const products = await productService.getActiveProducts();
           dispatch({ type: 'SET_PRODUCTS', payload: products });
         }
       } catch (e) {
-        console.error('[AppContext] updateProduct: failed to reload products after update', e);
+        console.error('[AppContext] updateProduct: failed to patch product in state', e);
       }
     },
     deleteProduct: async (id: number) => {
