@@ -55,12 +55,22 @@ class ProductService {
       throw new Error('La unidad de medida es requerida');
     }
 
-    // Verificar duplicados
-    const exists = await productRepository.existsByName(trimmedName);
-    if (exists) {
+    // Buscar por nombre (incluye activos e inactivos)
+    const existing = await productRepository.findByName(trimmedName);
+
+    if (existing) {
+      if (!existing.active) {
+        // Reactivar producto inactivo y actualizar sus campos
+        await productRepository.restore(existing.id);
+        await productRepository.updateProduct(existing.id, trimmedName, trimmedUnit, categoryId);
+        return existing.id;
+      }
+
+      // Ya existe activo -> comportamiento anterior: error de duplicado
       throw new Error(`Ya existe un producto con el nombre "${trimmedName}"`);
     }
 
+    // No existe -> crear nuevo registro
     return productRepository.create(trimmedName, trimmedUnit, categoryId);
   }
 
