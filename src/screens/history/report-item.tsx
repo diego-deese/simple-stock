@@ -12,6 +12,7 @@ import { colors } from '@theme/colors';
 // Colores para los tipos de movimiento
 const ENTREGAS_COLOR = colors.success;
 const PEDIDOS_COLOR = colors.warning;
+const DESPERDICIO_COLOR = colors.warning;
 
 interface ReportItemProps {
   item: Report;
@@ -23,17 +24,12 @@ interface ReportItemProps {
 
 const getTypeConfig = (type: MovementType) => {
   if (type === 'entregas') {
-    return {
-      label: 'Entregas del Proveedor',
-      emoji: '📦',
-      color: ENTREGAS_COLOR,
-    };
+    return { label: 'Entregas del Proveedor', emoji: '📦', color: ENTREGAS_COLOR };
   }
-  return {
-    label: 'Pedidos de Cocina',
-    emoji: '📋',
-    color: PEDIDOS_COLOR,
-  };
+  if (type === 'desperdicio') {
+    return { label: 'Desperdicio', emoji: '♻️', color: DESPERDICIO_COLOR };
+  }
+  return { label: 'Pedidos de Cocina', emoji: '📋', color: PEDIDOS_COLOR };
 };
 
 export function ReportItem({ item, exporting, onPress, onExport, formatDate }: ReportItemProps) {

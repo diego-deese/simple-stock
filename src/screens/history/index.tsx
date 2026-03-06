@@ -22,6 +22,7 @@ import EmptyState from '@components/EmptyState';
 // Colores para los tipos de movimiento
 const ENTREGAS_COLOR = colors.success;
 const PEDIDOS_COLOR = colors.warning;
+const DESPERDICIO_COLOR = colors.warning; // usamos warning para desperdicio
 
 type FilterType = 'all' | MovementType;
 
@@ -49,6 +50,7 @@ export function History() {
     all: reports.length,
     entregas: reports.filter(r => r.type === 'entregas').length,
     pedidos: reports.filter(r => r.type === 'pedidos').length,
+    desperdicio: reports.filter(r => r.type === 'desperdicio').length,
   }), [reports]);
 
   useEffect(() => {
@@ -181,6 +183,21 @@ export function History() {
             📋 Pedidos ({counts.pedidos})
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            activeFilter === 'desperdicio' && styles.filterButtonDesperdicio,
+          ]}
+          onPress={() => setActiveFilter('desperdicio')}
+        >
+          <Text style={[
+            styles.filterText,
+            activeFilter === 'desperdicio' && styles.filterTextActive,
+          ]}>
+            ♻️ Desperdicio ({counts.desperdicio})
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -256,6 +273,9 @@ const styles = StyleSheet.create({
   },
   filterButtonPedidos: {
     backgroundColor: PEDIDOS_COLOR,
+  },
+  filterButtonDesperdicio: {
+    backgroundColor: DESPERDICIO_COLOR,
   },
   filterText: {
     fontSize: 12,
