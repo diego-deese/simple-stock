@@ -41,6 +41,11 @@ export function Categories() {
     }
   }, [categories]);
 
+  // By default show only active categories in the list (admin can still
+  // reactivate from elsewhere). This addresses cases where a soft-deleted
+  // category remains in state but should not be visible in the main list.
+  const visibleCategories = categories.filter((c: any) => c.active === 1 || c.active === true);
+
   const openAddModal = () => {
     setEditingCategory(null);
     setCategoryName('');
@@ -140,8 +145,8 @@ export function Categories() {
         />
 
         <FlatList
-          data={categories}
-          extraData={categories}
+          data={visibleCategories}
+          extraData={visibleCategories}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <CategoryItem
