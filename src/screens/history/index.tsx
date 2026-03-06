@@ -6,6 +6,8 @@ import {
   FlatList,
   Alert,
   TouchableOpacity,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '@context/AppContext';
@@ -36,6 +38,8 @@ export function History() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const { width } = useWindowDimensions();
+  const isSmallDevice = width < 380; // adjust threshold as needed
 
   // Filtrar reportes según el filtro activo
   const filteredReports = useMemo(() => {
@@ -138,67 +142,139 @@ export function History() {
       />
 
       {/* Filtros de tipo */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            activeFilter === 'all' && styles.filterButtonActive,
-          ]}
-          onPress={() => setActiveFilter('all')}
+      {isSmallDevice ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollContent}
         >
-          <Text style={[
-            styles.filterText,
-            activeFilter === 'all' && styles.filterTextActive,
-          ]}>
-            Todos ({counts.all})
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            activeFilter === 'entregas' && styles.filterButtonEntregas,
-          ]}
-          onPress={() => setActiveFilter('entregas')}
-        >
-          <Text style={[
-            styles.filterText,
-            activeFilter === 'entregas' && styles.filterTextActive,
-          ]}>
-            📦 Entregas ({counts.entregas})
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            activeFilter === 'pedidos' && styles.filterButtonPedidos,
-          ]}
-          onPress={() => setActiveFilter('pedidos')}
-        >
-          <Text style={[
-            styles.filterText,
-            activeFilter === 'pedidos' && styles.filterTextActive,
-          ]}>
-            📋 Pedidos ({counts.pedidos})
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              styles.filterButtonHorizontal,
+              activeFilter === 'all' && styles.filterButtonActive,
+            ]}
+            onPress={() => setActiveFilter('all')}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === 'all' && styles.filterTextActive,
+            ]}>
+              Todos ({counts.all})
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            activeFilter === 'desperdicio' && styles.filterButtonDesperdicio,
-          ]}
-          onPress={() => setActiveFilter('desperdicio')}
-        >
-          <Text style={[
-            styles.filterText,
-            activeFilter === 'desperdicio' && styles.filterTextActive,
-          ]}>
-            ♻️ Desperdicio ({counts.desperdicio})
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              styles.filterButtonHorizontal,
+              activeFilter === 'entregas' && styles.filterButtonEntregas,
+            ]}
+            onPress={() => setActiveFilter('entregas')}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === 'entregas' && styles.filterTextActive,
+            ]}>
+              📦 Entregas ({counts.entregas})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              styles.filterButtonHorizontal,
+              activeFilter === 'pedidos' && styles.filterButtonPedidos,
+            ]}
+            onPress={() => setActiveFilter('pedidos')}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === 'pedidos' && styles.filterTextActive,
+            ]}>
+              📋 Pedidos ({counts.pedidos})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              styles.filterButtonHorizontal,
+              activeFilter === 'desperdicio' && styles.filterButtonDesperdicio,
+            ]}
+            onPress={() => setActiveFilter('desperdicio')}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === 'desperdicio' && styles.filterTextActive,
+            ]}>
+              ♻️ Desperdicio ({counts.desperdicio})
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      ) : (
+        <View style={styles.filterContainer}>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === 'all' && styles.filterButtonActive,
+            ]}
+            onPress={() => setActiveFilter('all')}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === 'all' && styles.filterTextActive,
+            ]}>
+              Todos ({counts.all})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === 'entregas' && styles.filterButtonEntregas,
+            ]}
+            onPress={() => setActiveFilter('entregas')}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === 'entregas' && styles.filterTextActive,
+            ]}>
+              📦 Entregas ({counts.entregas})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === 'pedidos' && styles.filterButtonPedidos,
+            ]}
+            onPress={() => setActiveFilter('pedidos')}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === 'pedidos' && styles.filterTextActive,
+            ]}>
+              📋 Pedidos ({counts.pedidos})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilter === 'desperdicio' && styles.filterButtonDesperdicio,
+            ]}
+            onPress={() => setActiveFilter('desperdicio')}
+          >
+            <Text style={[
+              styles.filterText,
+              activeFilter === 'desperdicio' && styles.filterTextActive,
+            ]}>
+              ♻️ Desperdicio ({counts.desperdicio})
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <FlatList
         data={filteredReports}
@@ -256,6 +332,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  filterScrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  filterButtonHorizontal: {
+    marginRight: 8,
   },
   filterButton: {
     flex: 1,
