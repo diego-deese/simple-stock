@@ -6,6 +6,7 @@ import {
   Alert,
   Text,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempPedido } from '@app-types/index';
 import { colors } from '@theme/colors';
@@ -30,6 +31,8 @@ export function PedidosScreen() {
   const [loadingSections, setLoadingSections] = useState(true);
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
   const initialLoadDone = useRef(false);
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom || 0;
 
   // Cargar productos agrupados por categoría cuando la DB esté lista o los productos cambien
   // Se reconstruyen las secciones según temporales de pedidos o catálogo
@@ -209,7 +212,7 @@ export function PedidosScreen() {
           renderItem={renderProductItem}
           renderSectionHeader={renderSectionHeader}
           style={styles.productList}
-          contentContainerStyle={styles.productListContent}
+          contentContainerStyle={[styles.productListContent, { paddingBottom: 20 + bottomInset }]}
           showsVerticalScrollIndicator={false}
           extraData={quantityMap}
           stickySectionHeadersEnabled={false}
@@ -220,7 +223,7 @@ export function PedidosScreen() {
         />
       )}
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 20 + bottomInset }]}> 
         <View style={styles.footerButtons}>
           <AccessibleButton
             title={isEditMode ? 'CANCELAR' : 'EDITAR'}

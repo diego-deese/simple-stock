@@ -7,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempPedido, TempCount } from '@app-types/index';
 import { colors } from '@theme/colors';
@@ -70,6 +71,8 @@ export default function EntregasScreen() {
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
   const [editModes, setEditModes] = useState({ pedidos: false, entregas: false });
   const initialPedidosLoad = useRef(false);
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom || 0;
 
   useEffect(() => {
     if (dbReady) {
@@ -231,7 +234,7 @@ export default function EntregasScreen() {
           renderItem={renderProductItem}
           renderSectionHeader={renderSectionHeader}
           style={styles.productList}
-          contentContainerStyle={styles.productListContent}
+          contentContainerStyle={[styles.productListContent, { paddingBottom: 20 + bottomInset }]}
           showsVerticalScrollIndicator={false}
           extraData={{ mode, isEditMode, quantityMap }}
           stickySectionHeadersEnabled={false}
@@ -242,7 +245,7 @@ export default function EntregasScreen() {
         />
       )}
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 20 + bottomInset }]}> 
         <View style={styles.footerButtons}>
           <AccessibleButton
             title={isEditMode ? 'CANCELAR' : 'EDITAR'}
