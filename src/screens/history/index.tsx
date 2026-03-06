@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '@context/AppContext';
+import AccessibleButton from '@components/AccessibleButton';
 import { useAuth } from '@context/AuthContext';
 import { reportService, exportService } from '@services/index';
 import { Report, ReportDetail, MovementType } from '@app-types/index';
@@ -148,69 +149,53 @@ export function History() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScrollContent}
         >
-          <TouchableOpacity
+          <AccessibleButton
+            title={`Todos (${counts.all})`}
+            onPress={() => setActiveFilter('all')}
             style={[
               styles.filterButton,
               styles.filterButtonHorizontal,
               activeFilter === 'all' && styles.filterButtonActive,
             ]}
-            onPress={() => setActiveFilter('all')}
-          >
-            <Text style={[
-              styles.filterText,
-              activeFilter === 'all' && styles.filterTextActive,
-            ]}>
-              Todos ({counts.all})
-            </Text>
-          </TouchableOpacity>
+            textStyle={[styles.filterText, activeFilter === 'all' && styles.filterTextActive]}
+            responsiveText
+          />
 
-          <TouchableOpacity
+          <AccessibleButton
+            title={`📦 Entregas (${counts.entregas})`}
+            onPress={() => setActiveFilter('entregas')}
             style={[
               styles.filterButton,
               styles.filterButtonHorizontal,
               activeFilter === 'entregas' && styles.filterButtonEntregas,
             ]}
-            onPress={() => setActiveFilter('entregas')}
-          >
-            <Text style={[
-              styles.filterText,
-              activeFilter === 'entregas' && styles.filterTextActive,
-            ]}>
-              📦 Entregas ({counts.entregas})
-            </Text>
-          </TouchableOpacity>
+            textStyle={[styles.filterText, activeFilter === 'entregas' && styles.filterTextActive]}
+            responsiveText
+          />
 
-          <TouchableOpacity
+          <AccessibleButton
+            title={`📋 Pedidos (${counts.pedidos})`}
+            onPress={() => setActiveFilter('pedidos')}
             style={[
               styles.filterButton,
               styles.filterButtonHorizontal,
               activeFilter === 'pedidos' && styles.filterButtonPedidos,
             ]}
-            onPress={() => setActiveFilter('pedidos')}
-          >
-            <Text style={[
-              styles.filterText,
-              activeFilter === 'pedidos' && styles.filterTextActive,
-            ]}>
-              📋 Pedidos ({counts.pedidos})
-            </Text>
-          </TouchableOpacity>
+            textStyle={[styles.filterText, activeFilter === 'pedidos' && styles.filterTextActive]}
+            responsiveText
+          />
 
-          <TouchableOpacity
+          <AccessibleButton
+            title={`♻️ Desperdicio (${counts.desperdicio})`}
+            onPress={() => setActiveFilter('desperdicio')}
             style={[
               styles.filterButton,
               styles.filterButtonHorizontal,
               activeFilter === 'desperdicio' && styles.filterButtonDesperdicio,
             ]}
-            onPress={() => setActiveFilter('desperdicio')}
-          >
-            <Text style={[
-              styles.filterText,
-              activeFilter === 'desperdicio' && styles.filterTextActive,
-            ]}>
-              ♻️ Desperdicio ({counts.desperdicio})
-            </Text>
-          </TouchableOpacity>
+            textStyle={[styles.filterText, activeFilter === 'desperdicio' && styles.filterTextActive]}
+            responsiveText
+          />
         </ScrollView>
       ) : (
         <View style={styles.filterContainer}>
