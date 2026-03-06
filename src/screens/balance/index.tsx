@@ -20,7 +20,7 @@ import { MonthSelector } from './month-selector';
 const BALANCE_COLOR = colors.success; // Verde para balance
 
 export function BalanceScreen() {
-  const { dbReady, getBalanceMensual, getMonthsWithData, loadInventory } = useApp();
+  const { dbReady, getBalanceMensual, getMonthsWithData, loadInventory, inventory } = useApp();
   const [balanceMensual, setBalanceMensual] = useState<BalanceMensual[]>([]);
   const [monthsWithData, setMonthsWithData] = useState<MonthWithData[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -32,13 +32,13 @@ export function BalanceScreen() {
     if (dbReady) {
       loadMonthsAndData();
     }
-  }, [dbReady]);
+  }, [dbReady, inventory]);
 
   useEffect(() => {
     if (dbReady && selectedYear && selectedMonth) {
       loadBalanceData();
     }
-  }, [dbReady, selectedYear, selectedMonth]);
+  }, [dbReady, selectedYear, selectedMonth, inventory]);
 
   const loadMonthsAndData = async () => {
     try {
