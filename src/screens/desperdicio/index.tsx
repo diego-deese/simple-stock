@@ -14,9 +14,9 @@ import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
 import AccessibleButton from '@components/AccessibleButton';
 import { productService, reportService } from '@services/index';
-import { CategoryHeader } from '@screens/home/category-header';
-import { ProductItem } from '@screens/home/product-item';
-import { ConfirmationModal } from '@screens/home/confirmation-modal';
+import { CategoryHeader } from '@components/CategoryHeader';
+import ProductItemDesperdicio from '@screens/desperdicio/ProductItemDesperdicio';
+import { ConfirmationModal } from '@components/ConfirmationModal';
 
 export function DesperdicioScreen() {
   const {
@@ -122,7 +122,7 @@ export function DesperdicioScreen() {
     const quantity = quantityMap.get(item.name) || 0;
     const received = receivedMap.get(item.name) || 0;
     return (
-      <ProductItem
+      <ProductItemDesperdicio
         item={item}
         quantity={quantity}
         receivedQuantity={received}
@@ -195,6 +195,9 @@ export function DesperdicioScreen() {
         saving={savingReport}
         onCancel={() => setShowConfirmModal(false)}
         onConfirm={handleSaveReport}
+        title="Confirmar reporte de desperdicio"
+        subtitle="Se registrarán los siguientes productos como desperdicio:"
+        confirmButtonTitle="Guardar reporte"
       />
     </View>
   );

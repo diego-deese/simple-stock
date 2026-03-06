@@ -49,7 +49,7 @@ export function CategoryModal({
 
       <View style={styles.hint}>
         <Text style={styles.hintText}>
-          Las categorías ayudan a organizar los productos en el registro mensual.
+          Las categorías ayudan a organizar los productos en las entregas mensuales.
         </Text>
       </View>
       

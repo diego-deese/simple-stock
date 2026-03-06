@@ -12,28 +12,39 @@ import ModalWrapper from '@components/ModalWrapper';
 
 interface ConfirmationModalProps {
   visible: boolean;
-  tempCounts: TempCount[];
+  tempCounts?: TempCount[];
+  items?: { product_name: string; quantity: number }[]; // generic items override
   saving: boolean;
   onCancel: () => void;
   onConfirm: () => void;
+  title?: string;
+  subtitle?: string;
+  confirmButtonTitle?: string;
+  quantityColor?: string;
 }
 
-export function ConfirmationModal({ 
-  visible, 
-  tempCounts, 
-  saving, 
-  onCancel, 
-  onConfirm 
+export function ConfirmationModal({
+  visible,
+  tempCounts,
+  items,
+  saving,
+  onCancel,
+  onConfirm,
+  title = 'Confirmar reporte de desperdicio',
+  subtitle = 'Se registrarán los siguientes productos como desperdicio:',
+  confirmButtonTitle = 'Guardar reporte',
+  quantityColor,
 }: ConfirmationModalProps) {
-  const countsToShow = tempCounts.filter(count => count.quantity > 0);
+  const source = items ?? tempCounts ?? [];
+  const countsToShow = (source as { product_name: string; quantity: number }[]).filter(
+    (count) => count.quantity > 0
+  );
 
   return (
     <ModalWrapper visible={visible} maxHeight="70%">
-      <Text style={styles.modalTitle}>Confirmar reporte de desperdicio</Text>
+      <Text style={styles.modalTitle}>{title}</Text>
       
-      <Text style={styles.modalSubtitle}>
-        Se registrarán los siguientes productos como desperdicio:
-      </Text>
+      <Text style={styles.modalSubtitle}>{subtitle}</Text>
       
       <FlatList
         data={countsToShow}
@@ -42,7 +53,7 @@ export function ConfirmationModal({
         renderItem={({ item }) => (
           <View style={styles.modalItem}>
             <Text style={styles.modalItemName}>{item.product_name}</Text>
-            <Text style={styles.modalItemQuantity}>{item.quantity}</Text>
+            <Text style={[styles.modalItemQuantity, { color: quantityColor ?? colors.primary }]}>{item.quantity}</Text>
           </View>
         )}
       />
@@ -57,7 +68,7 @@ export function ConfirmationModal({
         />
         
          <AccessibleButton
-           title="Guardar reporte"
+           title={confirmButtonTitle}
           onPress={onConfirm}
           loading={saving}
           variant="primary"
