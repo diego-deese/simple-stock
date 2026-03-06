@@ -152,15 +152,56 @@ export function AppProvider({ children }: AppProviderProps) {
     // Productos
     addProduct: async (name: string, unit: string, categoryId?: number | null) => {
       await productService.createProduct(name, unit, categoryId);
-      // reload
+      // reload products
       const products = await productService.getActiveProducts();
       dispatch({ type: 'SET_PRODUCTS', payload: products });
+
+      // Recargar temporales desde la tabla de temporales para preservar
+      // pedidos no guardados (si existían).
+      let tempPedidosList: TempPedido[] = [];
+      try {
+        tempPedidosList = await reportService.getTempPedidos();
+        dispatch({ type: 'SET_TEMP_PEDIDOS', payload: tempPedidosList });
+      } catch (e) {
+        // ignorar errores no críticos
+      }
+
+      // Si el producto creado/reativado tiene un pedido histórico pero no
+      // existe en temporales, intentar recuperar la última cantidad registrada
+      // en reportes (último detalle de tipo 'pedidos') para restaurar la cifra.
+      try {
+        const product = products.find(p => p.name === name);
+        if (product) {
+          const existingTemp = tempPedidosList.find(t => t.product_name === name);
+          if (!existingTemp || existingTemp.quantity === 0) {
+            const latest = await reportService.getLatestPedidoDetail(name);
+            if (latest && latest.quantity > 0) {
+              // Guardar como temporal y recargar lista
+              await reportService.saveTempPedido(name, latest.quantity);
+              const refreshed = await reportService.getTempPedidos();
+              dispatch({ type: 'SET_TEMP_PEDIDOS', payload: refreshed });
+            }
+          }
+        }
+      } catch (e) {
+        // ignorar errores no críticos
+      }
     },
     updateProduct: async (id: number, name: string, unit: string, categoryId?: number | null) => {
       await productService.updateProduct(id, name, unit, categoryId);
     },
     deleteProduct: async (id: number) => {
+      // Desactivar producto
+      const product = await productService.getProductById(id);
       await productService.deactivateProduct(id);
+
+      // Recargar productos activos para actualizar UI
+      const products = await productService.getActiveProducts();
+      dispatch({ type: 'SET_PRODUCTS', payload: products });
+
+      // Nota: no borramos temporales (temp_pedidos/temp_counts) para preservar
+      // cantidades si el producto se reactiva más tarde. Las pantallas omiten
+      // automáticamente productos inactivos al renderizar.
     },
     loadProducts: async () => {
       const products = await productService.getActiveProducts();
@@ -199,8 +240,34 @@ export function AppProvider({ children }: AppProviderProps) {
       await reportService.savePedidosReport(tempPedidos);
     },
     loadCurrentMonthPedidos: async () => {
-      const res = await reportService.getCurrentMonthPedidosReport();
-      return res ? 'current' : 'none';
+      try {
+        // Intentar cargar reporte de pedidos del mes actual
+        const current = await reportService.getCurrentMonthPedidosReport();
+        if (current) {
+          const temp = current.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
+          // Actualizar estado y persistir temporales para recuperación si la app se cierra
+          dispatch({ type: 'SET_TEMP_PEDIDOS', payload: temp });
+          await reportService.saveTempPedidos(temp);
+          return 'current' as const;
+        }
+
+        // Si no existe, intentar cargar del mes anterior y copiarlo como temporales
+        const previous = await reportService.getPreviousMonthPedidosReport();
+        if (previous) {
+          const tempPrev = previous.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
+          dispatch({ type: 'SET_TEMP_PEDIDOS', payload: tempPrev });
+          await reportService.saveTempPedidos(tempPrev);
+          return 'previous' as const;
+        }
+
+        // No hay datos
+        dispatch({ type: 'SET_TEMP_PEDIDOS', payload: [] });
+        return 'none' as const;
+      } catch (error) {
+        console.error('[AppContext] Error cargando pedidos del mes actual:', error);
+        // En caso de error, no derribar la app; devolver 'none'
+        return 'none' as const;
+      }
     },
 
     // Temp counts
