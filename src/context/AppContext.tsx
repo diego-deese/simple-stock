@@ -211,6 +211,12 @@ export function AppProvider({ children }: AppProviderProps) {
     // Categorías
     loadCategories: async () => {
       const categories = await categoryService.getAllCategories();
+      // Debug: log loaded categories to help trace UI reload issues
+      try {
+        console.debug('[AppContext] loadCategories: loaded', categories.map((c: any) => ({ id: c.id, name: c.name, active: c.active })));
+      } catch (e) {
+        // ignore logging errors
+      }
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
     },
     addCategory: async (name: string) => {
@@ -226,8 +232,17 @@ export function AppProvider({ children }: AppProviderProps) {
     },
     deleteCategory: async (id: number) => {
       await categoryService.deactivateCategory(id);
+      // Reload categories into state
       const categories = await categoryService.getAllCategories();
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
+
+      // Debug: verify the category active flag in DB after soft-delete
+      try {
+        const cat = await categoryService.getCategoryById(id);
+        console.debug('[AppContext] deleteCategory: post-delete category row:', id, cat);
+      } catch (e) {
+        console.error('[AppContext] deleteCategory: failed to fetch category after delete', e);
+      }
     },
 
     // Reportes (entregas)
