@@ -47,8 +47,8 @@ const migrations: Migration[] = [
         FOREIGN KEY (report_id) REFERENCES reports (id) ON DELETE CASCADE
       );
 
-      -- Tabla temporal para persistir conteos durante el uso
-      CREATE TABLE IF NOT EXISTS temp_counts (
+      -- Tabla temporal para persistir conteos durante el uso (renombrada a temp_entregas)
+      CREATE TABLE IF NOT EXISTS temp_entregas (
         product_name TEXT PRIMARY KEY,
         quantity REAL NOT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -74,8 +74,8 @@ const migrations: Migration[] = [
     version: 2,
     name: 'add_timestamp_columns',
     up: `
-      -- Agregar updated_at a temp_counts si no existe
-      ALTER TABLE temp_counts ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP;
+      -- Agregar updated_at a temp_entregas si no existe
+      ALTER TABLE temp_entregas ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP;
     `,
   },
   // Migración para agregar tabla de credenciales de administrador
@@ -146,12 +146,14 @@ const migrations: Migration[] = [
       -- Índice único por producto para evitar duplicados
       CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_product ON inventory(product_id);
 
-      -- Tabla temporal para salidas (similar a temp_counts pero para salidas)
-      CREATE TABLE IF NOT EXISTS temp_outputs (
-        product_name TEXT PRIMARY KEY,
-        quantity REAL NOT NULL,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
+        -- Tabla temporal para salidas (similar a temp_entregas pero para salidas)
+       -- Esta tabla era usada temporalmente durante migraciones antiguas.
+       -- La marcamos como TEMPORAL para que no persista si la conexión/migración falla
+       CREATE TEMP TABLE IF NOT EXISTS temp_outputs (
+         product_name TEXT PRIMARY KEY,
+         quantity REAL NOT NULL,
+         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+       );
     `,
   },
   // Sistema de control de pedidos vs entregas
@@ -168,15 +170,16 @@ const migrations: Migration[] = [
       -- Recrear tabla reports con nuevo CHECK constraint
       -- SQLite no permite ALTER CHECK, así que recreamos la tabla
       
-      -- 1. Crear tabla temporal con nueva estructura
+       -- 1. Asegurarse de limpiar cualquier tabla auxiliar residual y crear tabla temporal
+       DROP TABLE IF EXISTS reports_new;
        CREATE TABLE reports_new (
-         id INTEGER PRIMARY KEY AUTOINCREMENT,
-         date DATETIME DEFAULT CURRENT_TIMESTAMP,
-         type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos')),
-         related_report_id INTEGER DEFAULT NULL,
-         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-         FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL
-       );
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date DATETIME DEFAULT CURRENT_TIMESTAMP,
+          type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos')),
+          related_report_id INTEGER DEFAULT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL
+        );
 
       -- 2. Copiar datos a la nueva tabla
       INSERT INTO reports_new (id, date, type, related_report_id, created_at)
@@ -215,14 +218,16 @@ const migrations: Migration[] = [
       -- Add desperdicio as a movement type in reports
       -- This migration introduces a new type to the reports table for registering spoilage
 
-       CREATE TABLE reports_new (
-         id INTEGER PRIMARY KEY AUTOINCREMENT,
-         date DATETIME DEFAULT CURRENT_TIMESTAMP,
-         type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos', 'desperdicio')),
-         related_report_id INTEGER DEFAULT NULL,
-         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-         FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL
-       );
+       -- Limpiar auxiliares residuales e crear tabla temporal para la migración
+       DROP TABLE IF EXISTS reports_new;
+        CREATE TABLE reports_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date DATETIME DEFAULT CURRENT_TIMESTAMP,
+          type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos', 'desperdicio')),
+          related_report_id INTEGER DEFAULT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL
+        );
 
       -- Copy existing data into reports_new
       INSERT INTO reports_new (id, date, type, related_report_id, created_at)

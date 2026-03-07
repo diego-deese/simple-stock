@@ -248,7 +248,7 @@ export function AppProvider({ children }: AppProviderProps) {
       const products = await productService.getActiveProducts();
       dispatch({ type: 'SET_PRODUCTS', payload: products });
 
-      // Nota: no borramos temporales (temp_pedidos/temp_counts) para preservar
+      // Nota: no borramos temporales (temp_pedidos/temp_entregas) para preservar
       // cantidades si el producto se reactiva más tarde. Las pantallas omiten
       // automáticamente productos inactivos al renderizar.
     },

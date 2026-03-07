@@ -126,7 +126,7 @@ class SeederManager {
     await db.execAsync(`
       DELETE FROM report_details;
       DELETE FROM reports;
-      DELETE FROM temp_counts;
+      DELETE FROM temp_entregas;
       DELETE FROM products;
       DELETE FROM categories;
     `);
