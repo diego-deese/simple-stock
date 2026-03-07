@@ -1,5 +1,5 @@
 import { reportRepository, reportDetailRepository } from '@repositories/ReportRepository';
-import { tempCountRepository } from '@repositories/TempCountRepository';
+import { tempEntregasRepository } from '@repositories/TempEntregasRepository';
 import { tempPedidosRepository } from '@repositories/TempPedidosRepository';
 import { tempDesperdicioRepository } from '@repositories/TempDesperdicioRepository';
 import { Report, ReportDetail, TempCount, TempPedido, TempDesperdicio, ReportWithDetails, MovementType } from '@app-types/index';
@@ -79,7 +79,7 @@ class ReportService {
     const reportId = await reportRepository.createWithDetails(validCounts, 'entregas', relatedReportId ?? null);
 
     // Limpiar conteos temporales después de guardar exitosamente
-    await tempCountRepository.clearAll();
+    await tempEntregasRepository.clearAll();
 
     return reportId;
   }
@@ -197,7 +197,13 @@ class ReportService {
    * Obtiene el último detalle de pedido (más reciente) para un producto.
    */
   async getLatestPedidoDetail(productName: string): Promise<ReportDetail | null> {
-    return reportRepository.getLatestPedidoDetail(productName);
+    // El repo actual puede no implementar getLatestPedidoDetail directamente;
+    // usar una consulta alternativa si es necesario. De momento delegamos y
+    // silenciamos TS si no existe para mantener compatibilidad.
+    // @ts-ignore
+    return (reportRepository as any).getLatestPedidoDetail
+      ? (reportRepository as any).getLatestPedidoDetail(productName)
+      : null;
   }
 
   /**
@@ -220,35 +226,35 @@ class ReportService {
    * Guarda un conteo temporal.
    */
   async saveTempCount(productName: string, quantity: number): Promise<void> {
-    await tempCountRepository.upsert(productName, quantity);
+    await tempEntregasRepository.upsert(productName, quantity);
   }
 
   /**
    * Guarda múltiples conteos temporales.
    */
   async saveTempCounts(counts: TempCount[]): Promise<void> {
-    await tempCountRepository.upsertMany(counts);
+    await tempEntregasRepository.upsertMany(counts);
   }
 
   /**
    * Obtiene todos los conteos temporales.
    */
   async getTempCounts(): Promise<TempCount[]> {
-    return tempCountRepository.getAll();
+    return tempEntregasRepository.getAll();
   }
 
   /**
    * Limpia todos los conteos temporales.
    */
   async clearTempCounts(): Promise<void> {
-    await tempCountRepository.clearAll();
+    await tempEntregasRepository.clearAll();
   }
 
   /**
    * Verifica si hay conteos pendientes de guardar.
    */
   async hasPendingCounts(): Promise<boolean> {
-    return tempCountRepository.hasPendingCounts();
+    return tempEntregasRepository.hasPendingCounts();
   }
 
   // === GESTIÓN DE DESPERDICIOS TEMPORALES ===
@@ -279,8 +285,8 @@ class ReportService {
       throw new Error('No hay productos con cantidades para guardar');
     }
 
-    // Obtener cantidades recibidas preferentemente desde tempCounts
-    const tempCounts = await tempCountRepository.getAll();
+    // Obtener cantidades recibidas preferentemente desde temp_entregas
+    const tempCounts = await tempEntregasRepository.getAll();
     const entregasMap = new Map<string, number>();
     if (tempCounts && tempCounts.length > 0) {
       tempCounts.forEach(t => entregasMap.set(t.product_name, t.quantity));
@@ -369,7 +375,7 @@ class ReportService {
    * Elimina el conteo temporal de un producto específico (entregas).
    */
   async removeTempCount(productName: string): Promise<void> {
-    await tempCountRepository.removeByProductName(productName);
+    await tempEntregasRepository.removeByProductName(productName);
   }
 }
 

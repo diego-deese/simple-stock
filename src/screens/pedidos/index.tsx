@@ -19,6 +19,7 @@ import { productService } from '@services/index';
 import FooterActions from '@components/FooterActions';
 import PedidoSelectorModal from '@screens/entregas/PedidoSelectorModal';
 import { reportService } from '@services/index';
+import AccessibleButton from '@/components/AccessibleButton';
 
 // Color para la pantalla de pedidos
 const PEDIDOS_COLOR = colors.warning;
