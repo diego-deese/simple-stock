@@ -15,11 +15,13 @@ import FooterActions from '@components/FooterActions';
 import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
 import { productService } from '@services/index';
+import { reportService } from '@services/index';
 import { CategoryHeader } from '@components/CategoryHeader';
 import EntregaItem from '@screens/entregas/entrega-item';
 import { PedidoItem } from '@screens/pedidos/pedido-item';
   import { ConfirmationModal } from '@components/ConfirmationModal';
 import { PedidoConfirmationModal } from '@screens/pedidos/pedido-confirmation-modal';
+import PedidoSelectorModal from '@screens/entregas/PedidoSelectorModal';
 
 type RegistroMode = 'pedidos' | 'entregas';
 
@@ -70,7 +72,9 @@ export default function EntregasScreen() {
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
   const [editModes, setEditModes] = useState({ pedidos: false, entregas: false });
   const initialPedidosLoad = useRef(false);
-  // safe-area insets not used here anymore (FooterActions handles footer)
+  const [pedidoModalVisible, setPedidoModalVisible] = useState(false);
+  const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null);
+  const [selectedPedidoDetails, setSelectedPedidoDetails] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (dbReady) {
@@ -109,6 +113,22 @@ export default function EntregasScreen() {
     } catch (error) {
       console.error('[EntregasScreen] Error al cargar pedidos del mes:', error);
       setCopiedFromPrevious(false);
+    }
+  };
+
+  const handleOpenPedidoSelector = () => setPedidoModalVisible(true);
+
+  const handlePedidoSelected = async (id: number) => {
+    try {
+      const res = await reportService.getReportWithDetails(id);
+      if (res) {
+        const map = new Map<string, number>();
+        res.details.forEach(d => map.set(d.product_name, d.quantity));
+        setSelectedPedidoDetails(map);
+        setSelectedPedidoId(id);
+      }
+    } catch (err) {
+      console.error('Error loading pedido details', err);
     }
   };
 
@@ -151,7 +171,7 @@ export default function EntregasScreen() {
         setCopiedFromPrevious(false);
         Alert.alert('Pedido Guardado', `Se registraron ${entries.length} productos en el pedido del mes.`, [{ text: 'OK' }]);
       } else {
-        await saveEntregasReport(entries);
+        await saveEntregasReport(entries, selectedPedidoId ?? null);
         Alert.alert('Entregas Guardadas', `Se registraron ${entries.length} productos en las entregas.`, [{ text: 'OK' }]);
       }
 
@@ -189,9 +209,10 @@ export default function EntregasScreen() {
         onDecrement={() => updateTempCount(item.name, Math.max(0, quantity - 1))}
         onIncrement={() => updateTempCount(item.name, quantity + 1)}
         onQuantityChange={(value: number) => updateTempCount(item.name, value)}
+        pedidoQuantity={selectedPedidoDetails.get(item.name) || 0}
       />
     );
-  }, [mode, quantityMap, isEditMode, updateTempPedido, updateTempCount]);
+  }, [mode, quantityMap, isEditMode, updateTempPedido, updateTempCount, selectedPedidoDetails]);
 
   const renderSectionHeader = useCallback(({ section }: { section: ProductSection }) => (
     <CategoryHeader title={section.title} />
@@ -225,6 +246,14 @@ export default function EntregasScreen() {
 
       <ModeToggle mode={mode} onChange={setMode} />
 
+      {mode === 'entregas' && (
+        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+          <TouchableOpacity onPress={handleOpenPedidoSelector} style={{ padding: 12, backgroundColor: '#FFF3E0', borderRadius: 10, alignItems: 'center' }}>
+            <Text style={{ fontWeight: '700' }}>{selectedPedidoId ? `Pedido seleccionado #${selectedPedidoId}` : 'Relacionar pedido'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {hasProducts ? (
         <SectionList
           sections={sections}
@@ -234,7 +263,7 @@ export default function EntregasScreen() {
           style={styles.productList}
           contentContainerStyle={styles.productListContent}
           showsVerticalScrollIndicator={false}
-          extraData={{ mode, isEditMode, quantityMap }}
+          extraData={{ mode, isEditMode, quantityMap, selectedPedidoDetails }}
           stickySectionHeadersEnabled={false}
         />
       ) : (
@@ -272,6 +301,7 @@ export default function EntregasScreen() {
           quantityColor={ENTREGAS_COLOR}
         />
       )}
+      <PedidoSelectorModal visible={pedidoModalVisible} onClose={() => setPedidoModalVisible(false)} onSelect={handlePedidoSelected} />
     </View>
   );
 }
@@ -321,7 +351,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 8,
+    marginBottom: 8
   },
   toggleButton: {
     flex: 1,

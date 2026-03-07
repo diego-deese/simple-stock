@@ -47,14 +47,22 @@ class ReportRepository extends BaseRepository<Report> {
    * @param counts - Conteos de productos
     * @param type - Tipo de movimiento ('entregas' | 'pedidos')
     */
-  async createWithDetails(counts: TempCount[] | TempPedido[], type: MovementType = 'entregas'): Promise<number> {
+  async createWithDetails(counts: TempCount[] | TempPedido[], type: MovementType = 'entregas', relatedReportId?: number | null): Promise<number> {
     const db = this.getDb();
     
     // Crear el reporte con tipo
-    const reportResult = await db.runAsync(
-      'INSERT INTO reports (date, type) VALUES (CURRENT_TIMESTAMP, ?)',
-      [type]
-    );
+    let reportResult: any;
+    if (typeof relatedReportId !== 'undefined' && relatedReportId !== null) {
+      reportResult = await db.runAsync(
+        'INSERT INTO reports (date, type, related_report_id) VALUES (CURRENT_TIMESTAMP, ?, ?)',
+        [type, relatedReportId]
+      );
+    } else {
+      reportResult = await db.runAsync(
+        'INSERT INTO reports (date, type) VALUES (CURRENT_TIMESTAMP, ?)',
+        [type]
+      );
+    }
     const reportId = reportResult.lastInsertRowId;
 
     // Insertar los detalles (solo cantidades > 0)

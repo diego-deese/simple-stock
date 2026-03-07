@@ -38,6 +38,7 @@ export interface Report {
   id: number;
   date: string; // ISO string format
   type: MovementType; // 'entregas' o 'pedidos'
+  related_report_id?: number | null; // opcional: para vincular entregas a un pedido
   created_at?: string;
 }
 
@@ -325,12 +326,12 @@ export interface AppContextType {
   deleteCategory: (id: number) => Promise<void>;
   
   // Funciones para reportes (entregas)
-  saveEntregasReport: (tempCounts: TempCount[]) => Promise<void>;
+  saveEntregasReport: (tempCounts: TempCount[], relatedReportId?: number | null) => Promise<void>;
   loadReports: () => Promise<void>;
   getReportDetails: (reportId: number) => Promise<ReportDetail[]>;
   
   // Funciones para pedidos
-  savePedidosReport: (tempPedidos: TempPedido[]) => Promise<void>;
+  savePedidosReport: (tempPedidos: TempPedido[], reportIdToEdit?: number | null) => Promise<void>;
   loadCurrentMonthPedidos: () => Promise<PedidosLoadSource>;
   
   // Funciones para conteo temporal (entregas)
@@ -344,6 +345,8 @@ export interface AppContextType {
   clearTempPedidos: () => void;
   loadTempPedidos: () => Promise<void>;
   saveTempPedidos: () => Promise<void>;
+  // Reemplaza la lista de pedidos temporales en el estado (útil para editar un reporte específico)
+  setTempPedidos: (tempPedidos: TempPedido[]) => void;
   
   // Funciones para balance mensual
   loadInventory: () => Promise<void>;
