@@ -28,11 +28,14 @@ const migrations: Migration[] = [
       );
 
       -- Tabla de reportes
-      CREATE TABLE IF NOT EXISTS reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
+       CREATE TABLE IF NOT EXISTS reports (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         date DATETIME DEFAULT CURRENT_TIMESTAMP,
+         type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos', 'desperdicio')),
+         related_report_id INTEGER DEFAULT NULL,
+         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+         FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL
+       );
 
       -- Tabla de detalles de reportes
       CREATE TABLE IF NOT EXISTS report_details (
@@ -166,16 +169,18 @@ const migrations: Migration[] = [
       -- SQLite no permite ALTER CHECK, así que recreamos la tabla
       
       -- 1. Crear tabla temporal con nueva estructura
-      CREATE TABLE reports_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos')),
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
+       CREATE TABLE reports_new (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         date DATETIME DEFAULT CURRENT_TIMESTAMP,
+         type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos')),
+         related_report_id INTEGER DEFAULT NULL,
+         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+         FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL
+       );
 
       -- 2. Copiar datos a la nueva tabla
-      INSERT INTO reports_new (id, date, type, created_at)
-      SELECT id, date, type, created_at FROM reports;
+      INSERT INTO reports_new (id, date, type, related_report_id, created_at)
+      SELECT id, date, type, NULL as related_report_id, created_at FROM reports;
 
       -- 3. Eliminar tabla vieja
       DROP TABLE reports;
@@ -187,8 +192,20 @@ const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_reports_date ON reports(date);
       CREATE INDEX IF NOT EXISTS idx_reports_type ON reports(type);
 
-      -- Renombrar tabla temp_outputs a temp_pedidos para consistencia
-      ALTER TABLE temp_outputs RENAME TO temp_pedidos;
+       -- Asegurar que exista la tabla temp_pedidos; migrar datos desde temp_outputs si existe
+       CREATE TABLE IF NOT EXISTS temp_pedidos (
+         product_name TEXT PRIMARY KEY,
+         quantity REAL NOT NULL,
+         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+       );
+
+       -- Intentar copiar datos desde la tabla legacy (si existe). Si no existe, la instrucción fallará
+       -- pero el manejador de migraciones está preparado para continuar en ese caso.
+       INSERT OR REPLACE INTO temp_pedidos (product_name, quantity, updated_at)
+       SELECT product_name, quantity, updated_at FROM temp_outputs;
+
+       -- Eliminar la tabla legacy si existe
+       DROP TABLE IF EXISTS temp_outputs;
     `,
   },
   {
@@ -198,16 +215,18 @@ const migrations: Migration[] = [
       -- Add desperdicio as a movement type in reports
       -- This migration introduces a new type to the reports table for registering spoilage
 
-      CREATE TABLE reports_new (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos', 'desperdicio')),
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
+       CREATE TABLE reports_new (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         date DATETIME DEFAULT CURRENT_TIMESTAMP,
+         type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos', 'desperdicio')),
+         related_report_id INTEGER DEFAULT NULL,
+         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+         FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL
+       );
 
       -- Copy existing data into reports_new
-      INSERT INTO reports_new (id, date, type, created_at)
-      SELECT id, date, type, created_at FROM reports;
+      INSERT INTO reports_new (id, date, type, related_report_id, created_at)
+      SELECT id, date, type, NULL as related_report_id, created_at FROM reports;
 
       -- Replace the existing reports table
       DROP TABLE reports;
@@ -299,11 +318,15 @@ class MigrationManager {
         
         console.log(`[Migrations] v${migration.version} aplicada correctamente`);
       } catch (error) {
-        // Manejar errores esperados (ej: columna ya existe)
+        // Manejar errores esperados (ej: columna ya existe o tabla faltante en instalaciones antiguas)
         const errorMessage = error instanceof Error ? error.message : String(error);
-        
-        if (errorMessage.includes('duplicate column name')) {
-          console.log(`[Migrations] v${migration.version}: Columna ya existe, continuando...`);
+
+        // Tratar casos conocidos como no fatales para permitir continuar con el resto de migraciones.
+        if (
+          errorMessage.includes('duplicate column name') ||
+          errorMessage.includes('no such table: temp_outputs')
+        ) {
+          console.log(`[Migrations] v${migration.version}: Caso conocido (${errorMessage}), continuando...`);
           await this.recordMigration(migration);
         } else {
           console.error(`[Migrations] Error en v${migration.version}:`, error);

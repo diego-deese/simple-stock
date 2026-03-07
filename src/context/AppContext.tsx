@@ -328,21 +328,8 @@ export function AppProvider({ children }: AppProviderProps) {
     },
 
     // Reportes (entregas)
-    saveEntregasReport: async (tempCounts: TempCount[]) => {
-      await reportService.saveEntregasReport(tempCounts);
-      // Clear temporary counts in context so UI resets to zero immediately
-      dispatch({ type: 'SET_TEMP_COUNTS', payload: [] });
-      // After saving entregas, refresh reports and inventory (balance mensual)
-      try {
-        await contextValue.loadReports();
-      } catch (e) {
-        console.error('[AppContext] saveEntregasReport: failed to reload reports', e);
-      }
-      try {
-        await contextValue.loadInventory();
-      } catch (e) {
-        console.error('[AppContext] saveEntregasReport: failed to reload inventory', e);
-      }
+    saveEntregasReport: async (tempCounts: TempCount[], relatedReportId?: number | null) => {
+      await reportService.saveEntregasReport(tempCounts, relatedReportId ?? null);
     },
     loadReports: async () => {
       const reports = await reportService.getAllReports();
@@ -353,27 +340,11 @@ export function AppProvider({ children }: AppProviderProps) {
     },
 
     // Pedidos
-    savePedidosReport: async (tempPedidos: TempPedido[]) => {
-      await reportService.savePedidosReport(tempPedidos);
-      // After saving pedidos, reload the current month's pedidos into temporals
-      // so the Pedidos screen continues showing the month's shopping list.
-      try {
-        await contextValue.loadReports();
-      } catch (e) {
-        console.error('[AppContext] savePedidosReport: failed to reload reports', e);
-      }
-
-      try {
-        await contextValue.loadCurrentMonthPedidos();
-      } catch (e) {
-        console.error('[AppContext] savePedidosReport: failed to reload current month pedidos', e);
-      }
-
-      try {
-        await contextValue.loadInventory();
-      } catch (e) {
-        console.error('[AppContext] savePedidosReport: failed to reload inventory', e);
-      }
+    savePedidosReport: async (tempPedidos: TempPedido[], reportIdToEdit?: number | null) => {
+      await reportService.savePedidosReport(tempPedidos, reportIdToEdit ?? null);
+    },
+    setTempPedidos: (tempPedidos: TempPedido[]) => {
+      dispatch({ type: 'SET_TEMP_PEDIDOS', payload: tempPedidos });
     },
     loadCurrentMonthPedidos: async () => {
       try {

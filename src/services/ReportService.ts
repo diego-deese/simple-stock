@@ -65,7 +65,7 @@ class ReportService {
    * Guarda un nuevo reporte de entregas a partir de los conteos temporales.
    * @throws Error si no hay conteos para guardar.
    */
-  async saveEntregasReport(counts: TempCount[]): Promise<number> {
+  async saveEntregasReport(counts: TempCount[], relatedReportId?: number | null): Promise<number> {
     // Filtrar solo cantidades positivas
     const validCounts = counts.filter(c => c.quantity > 0);
 
@@ -74,7 +74,9 @@ class ReportService {
     }
 
     // Crear el reporte de entregas
-    const reportId = await reportRepository.createWithDetails(validCounts, 'entregas');
+    // Si existe un pedido reciente para relacionar, el UI podrá pasar su id.
+    // Por ahora creamos la entrega sin relación (caller puede pasar relatedReportId más adelante si se extiende).
+    const reportId = await reportRepository.createWithDetails(validCounts, 'entregas', relatedReportId ?? null);
 
     // Limpiar conteos temporales después de guardar exitosamente
     await tempCountRepository.clearAll();
@@ -88,7 +90,7 @@ class ReportService {
    * Si no existe, crea uno nuevo.
    * @throws Error si no hay pedidos para guardar.
    */
-  async savePedidosReport(pedidos: TempPedido[]): Promise<number> {
+  async savePedidosReport(pedidos: TempPedido[], reportIdToEdit?: number | null): Promise<number> {
     // Filtrar solo cantidades positivas
     const validPedidos = pedidos.filter(pedido => pedido.quantity > 0);
 
@@ -96,13 +98,27 @@ class ReportService {
       throw new Error('No hay productos con cantidades para guardar');
     }
 
-    // Crear o actualizar el reporte de pedido del mes actual
+    // Si se pasa un reportId, actualizar ese reporte en particular
+    if (typeof reportIdToEdit !== 'undefined' && reportIdToEdit !== null) {
+      await reportRepository.updateReportDetails(reportIdToEdit, validPedidos);
+      await tempPedidosRepository.clearAll();
+      return reportIdToEdit;
+    }
+
+    // Crear o actualizar el reporte de pedido del mes actual (comportamiento por defecto)
     const reportId = await reportRepository.upsertPedidosReport(validPedidos);
 
     // Limpiar pedidos temporales después de guardar exitosamente
     await tempPedidosRepository.clearAll();
 
     return reportId;
+  }
+
+  /**
+   * Obtiene la lista de reportes de pedidos (misma función ya existente) y retorna detalles de uno por id
+   */
+  async getPedidoWithDetails(id: number) {
+    return reportRepository.findByIdWithDetails(id);
   }
 
   /**

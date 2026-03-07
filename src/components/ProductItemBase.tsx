@@ -8,6 +8,7 @@ export interface ProductItemBaseProps {
   quantity: number;
   isEditMode: boolean;
   receivedQuantity?: number;
+  pedidoQuantity?: number; // cantidad pedida para comparar en pantalla de entregas
   onDecrement: () => void;
   onIncrement: () => void;
   onQuantityChange: (value: number) => void;
@@ -46,6 +47,8 @@ export const ProductItemBase = memo(function ProductItemBase(props: ProductItemB
   };
 
   const remaining = (receivedQuantity ?? 0) - quantity;
+  const pedidoQty = props.pedidoQuantity;
+  const diferencia = (quantity || 0) - (pedidoQty || 0);
 
   return (
     <View style={styles.productItem}>
@@ -90,13 +93,33 @@ export const ProductItemBase = memo(function ProductItemBase(props: ProductItemB
         </View>
       </View>
 
-      {(showStock !== false) && (
+      {(typeof pedidoQty !== 'undefined') ? (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.comparisonContainer}>
+          <View style={styles.compareBlock}>
+            <Text style={styles.compareLabel}>Pedido</Text>
+            <Text style={[styles.compareValue, { color: '#FF9800' }]}>{pedidoQty}</Text>
+          </View>
+
+          <View style={styles.compareBlock}>
+            <Text style={styles.compareLabel}>Entrega</Text>
+            <Text style={[styles.compareValue, { color: variantColor ?? colors.success }]}>{quantity}</Text>
+          </View>
+
+          <View style={styles.compareBlock}>
+            <Text style={styles.compareLabel}>Diferencia</Text>
+            <Text style={[styles.compareValue, diferencia < 0 ? styles.negative : diferencia > 0 ? styles.positive : styles.ok]}>{diferencia}</Text>
+          </View>
+          </View>
+        </>
+      ) : ((showStock !== false) && (
         <View style={styles.stockInfoContainer}>
           <Text style={styles.stockText}>Recibido: {receivedQuantity ?? 0}</Text>
           <Text style={styles.stockSeparator}> · </Text>
           <Text style={styles.wasteText}>Desperdicio: {quantity}</Text>
         </View>
-      )}
+      ))}
     </View>
   );
 });
@@ -150,6 +173,14 @@ const styles = StyleSheet.create({
   stockText: { fontSize: 16, color: colors.textPrimary, fontWeight: '600' },
   wasteText: { fontSize: 16, color: colors.error, fontWeight: '600' },
   stockSeparator: { marginHorizontal: 8, fontSize: 16, color: colors.textSecondary },
+  comparisonContainer: { width: '100%', marginTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  compareBlock: { alignItems: 'center', flex: 1 },
+  compareLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
+  compareValue: { fontSize: 20, fontWeight: '700' },
+  negative: { color: colors.error },
+  positive: { color: '#1976D2' },
+  ok: { color: '#4CAF50' },
+  divider: { height: 1, width: '100%', backgroundColor: colors.border, marginVertical: 12 },
 });
 
 export default ProductItemBase;

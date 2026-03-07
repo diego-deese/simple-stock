@@ -17,18 +17,44 @@ import ScreenHeader from '@components/ScreenHeader';
 import EmptyState from '@components/EmptyState';
 import { productService } from '@services/index';
 import FooterActions from '@components/FooterActions';
+import PedidoSelectorModal from '@screens/entregas/PedidoSelectorModal';
+import { reportService } from '@services/index';
 
 // Color para la pantalla de pedidos
 const PEDIDOS_COLOR = colors.warning;
 
 export function PedidosScreen() {
-  const { tempPedidos, updateTempPedido, savePedidosReport, loadCurrentMonthPedidos, loading, dbReady, products } = useApp();
+  const { tempPedidos, updateTempPedido, savePedidosReport, loadCurrentMonthPedidos, loading, dbReady, products, setTempPedidos } = useApp();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [sections, setSections] = useState<ProductSection[]>([]);
   const [loadingSections, setLoadingSections] = useState(true);
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
+  const [pedidoModalVisible, setPedidoModalVisible] = useState(false);
+  const [editingPedidoId, setEditingPedidoId] = useState<number | null>(null);
+
+  const openPedidoSelector = () => setPedidoModalVisible(true);
+  // Debug helper: trace when selector is opened
+  const debugOpenPedidoSelector = () => {
+    console.log('[Pedidos] openPedidoSelector called');
+    openPedidoSelector();
+  };
+
+  const handlePedidoSelected = async (id: number) => {
+    try {
+      const res = await reportService.getReportWithDetails(id);
+      if (res) {
+        const temp = res.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
+        setTempPedidos(temp);
+        setEditingPedidoId(id);
+        setPedidoModalVisible(false);
+        setIsEditMode(true);
+      }
+    } catch (err) {
+      console.error('Error loading pedido details', err);
+    }
+  };
   const initialLoadDone = useRef(false);
   // safe-area insets not used here anymore (FooterActions handles footer)
 
@@ -133,7 +159,12 @@ export function PedidosScreen() {
         return;
       }
 
-      await savePedidosReport(pedidosToSave);
+      // Si estamos editando un pedido concreto, pasar su id para actualizar
+      if (editingPedidoId) {
+        await savePedidosReport(pedidosToSave, editingPedidoId);
+      } else {
+        await savePedidosReport(pedidosToSave);
+      }
       
       Alert.alert(
         'Pedidos Guardados',
@@ -143,6 +174,7 @@ export function PedidosScreen() {
       
       setShowConfirmModal(false);
       setIsEditMode(false);
+      setEditingPedidoId(null);
     } catch (error) {
       Alert.alert(
         'Error',
@@ -203,6 +235,21 @@ export function PedidosScreen() {
         backgroundColor={PEDIDOS_COLOR}
       />
 
+      <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+        {editingPedidoId ? (
+              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontWeight: '700' }}>Editando pedido #{editingPedidoId}</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+              <AccessibleButton title="Salir edición" onPress={() => { setEditingPedidoId(null); setTempPedidos([]); setIsEditMode(false); }} variant="danger" />
+              <AccessibleButton title="Seleccionar otro" onPress={debugOpenPedidoSelector} variant="secondary" style={{ backgroundColor: '#F47C1F' }} />
+                </View>
+              </View>
+            ) : (
+          // Make selector button visually prominent while debugging layout/visibility issues
+          <AccessibleButton title="Seleccionar Pedido" onPress={debugOpenPedidoSelector} variant="secondary" style={{ backgroundColor: '#F47C1F' }} />
+        )}
+      </View>
+
       {hasProducts ? (
         <SectionList
           sections={sections}
@@ -236,6 +283,7 @@ export function PedidosScreen() {
         onCancel={() => setShowConfirmModal(false)}
         onConfirm={handleSaveReport}
       />
+      <PedidoSelectorModal visible={pedidoModalVisible} onClose={() => setPedidoModalVisible(false)} onSelect={handlePedidoSelected} />
     </View>
   );
 }
