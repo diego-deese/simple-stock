@@ -261,11 +261,6 @@ export function AppProvider({ children }: AppProviderProps) {
     loadCategories: async () => {
       const categories = await categoryService.getAllCategories();
       // Debug: log loaded categories to help trace UI reload issues
-      try {
-        console.debug('[AppContext] loadCategories: loaded', categories.map((c: any) => ({ id: c.id, name: c.name, active: c.active })));
-      } catch (e) {
-        // ignore logging errors
-      }
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
       // Also refresh products so views that include category_name react to changes
       try {
