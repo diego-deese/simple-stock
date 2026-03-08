@@ -68,16 +68,7 @@ const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_report_details_report_id ON report_details(report_id);
     `,
   },
-  // Migración para agregar columnas de timestamp faltantes
-  // (necesaria si la app ya existía con el schema antiguo)
-  {
-    version: 2,
-    name: 'add_timestamp_columns',
-    up: `
-      -- Agregar updated_at a temp_entregas si no existe
-      ALTER TABLE temp_entregas ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP;
-    `,
-  },
+  
   // Migración para agregar tabla de credenciales de administrador
   {
     version: 3,
@@ -146,69 +137,12 @@ const migrations: Migration[] = [
       -- Índice único por producto para evitar duplicados
       CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_product ON inventory(product_id);
 
-        -- Tabla temporal para salidas (similar a temp_entregas pero para salidas)
-       -- Esta tabla era usada temporalmente durante migraciones antiguas.
-       -- La marcamos como TEMPORAL para que no persista si la conexión/migración falla
-       CREATE TEMP TABLE IF NOT EXISTS temp_outputs (
-         product_name TEXT PRIMARY KEY,
-         quantity REAL NOT NULL,
-         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-       );
-    `,
-  },
-  // Sistema de control de pedidos vs entregas
-  {
-    version: 6,
-    name: 'rename_movement_types',
-    up: `
-      -- Actualizar valores existentes en la tabla reports
-      -- 'entrada' (lo que llegaba) -> 'entregas' (entregas del proveedor)
-      -- 'salida' (lo que salía a cocina) -> 'pedidos' (lo que cocina necesita)
-      UPDATE reports SET type = 'entregas' WHERE type = 'entrada';
-      UPDATE reports SET type = 'pedidos' WHERE type = 'salida';
-
-      -- Recrear tabla reports con nuevo CHECK constraint
-      -- SQLite no permite ALTER CHECK, así que recreamos la tabla
-      
-       -- 1. Asegurarse de limpiar cualquier tabla auxiliar residual y crear tabla temporal
-       DROP TABLE IF EXISTS reports_new;
-       CREATE TABLE reports_new (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          date DATETIME DEFAULT CURRENT_TIMESTAMP,
-          type TEXT DEFAULT 'entregas' CHECK (type IN ('entregas', 'pedidos')),
-          related_report_id INTEGER DEFAULT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL
-        );
-
-      -- 2. Copiar datos a la nueva tabla
-      INSERT INTO reports_new (id, date, type, related_report_id, created_at)
-      SELECT id, date, type, NULL as related_report_id, created_at FROM reports;
-
-      -- 3. Eliminar tabla vieja
-      DROP TABLE reports;
-
-      -- 4. Renombrar tabla nueva
-      ALTER TABLE reports_new RENAME TO reports;
-
-      -- 5. Recrear índices
-      CREATE INDEX IF NOT EXISTS idx_reports_date ON reports(date);
-      CREATE INDEX IF NOT EXISTS idx_reports_type ON reports(type);
-
-       -- Asegurar que exista la tabla temp_pedidos; migrar datos desde temp_outputs si existe
-       CREATE TABLE IF NOT EXISTS temp_pedidos (
-         product_name TEXT PRIMARY KEY,
-         quantity REAL NOT NULL,
-         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-       );
-
-       -- Intentar copiar datos desde la tabla legacy (si existe). Si no existe, la instrucción fallará
-       -- pero el manejador de migraciones está preparado para continuar en ese caso.
-       INSERT OR REPLACE INTO temp_pedidos (product_name, quantity, updated_at)
-       SELECT product_name, quantity, updated_at FROM temp_outputs;
-
-       -- Eliminar la tabla legacy si existe
-       DROP TABLE IF EXISTS temp_outputs;
+      -- Tabla temporal para pedidos (similar a temp_entregas)
+      CREATE TABLE IF NOT EXISTS temp_pedidos (
+        product_name TEXT PRIMARY KEY,
+        quantity REAL NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
     `,
   },
   {
@@ -315,28 +249,52 @@ class MigrationManager {
     console.log(`[Migrations] Ejecutando ${pendingMigrations.length} migración(es) pendiente(s)...`);
 
     for (const migration of pendingMigrations) {
+      console.log(`[Migrations] Aplicando v${migration.version}: ${migration.name}`);
+
+      // Ejecutar cada sentencia SQL por separado para que errores en una sentencia
+      // no impidan la ejecución de las posteriores (por ejemplo ALTER TABLE que
+      // falla porque la columna ya existe). Se limpian comentarios (`--` y `/* */`)
+      // antes de partir por `;` para evitar errores de sintaxis por fragmentos
+      // que contengan texto no-SQL.
+      const cleaned = migration.up
+        .replace(/\/\*[\s\S]*?\*\//g, '') // quitar comentarios en bloque
+        .replace(/--.*$/gm, ''); // quitar comentarios de línea
+
+      const statements = cleaned
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
       try {
-        console.log(`[Migrations] Aplicando v${migration.version}: ${migration.name}`);
-        
-        await db.execAsync(migration.up);
+        for (const stmt of statements) {
+          try {
+            await db.execAsync(stmt + ';');
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            // Errores benignos conocidos: columnas/índices que ya existen, tablas temporales ausentes, etc.
+            if (
+              errorMessage.includes('duplicate column name') ||
+              errorMessage.includes('no such table: temp_pedidos') ||
+              errorMessage.includes('already exists') ||
+              errorMessage.includes('duplicate index')
+            ) {
+              console.log(`[Migrations] v${migration.version}: Sentencia ignorada (${errorMessage})`);
+              continue;
+            }
+
+            // Si no es un error esperado, volver a lanzar para abortar la migración.
+            console.error(`[Migrations] Error en v${migration.version} al ejecutar sentencia:`, error);
+            throw error;
+          }
+        }
+
+        // Si llegamos aquí, todas las sentencias de la migración fueron procesadas (o ignoradas si era benigno)
         await this.recordMigration(migration);
-        
         console.log(`[Migrations] v${migration.version} aplicada correctamente`);
       } catch (error) {
-        // Manejar errores esperados (ej: columna ya existe o tabla faltante en instalaciones antiguas)
-        const errorMessage = error instanceof Error ? error.message : String(error);
-
-        // Tratar casos conocidos como no fatales para permitir continuar con el resto de migraciones.
-        if (
-          errorMessage.includes('duplicate column name') ||
-          errorMessage.includes('no such table: temp_outputs')
-        ) {
-          console.log(`[Migrations] v${migration.version}: Caso conocido (${errorMessage}), continuando...`);
-          await this.recordMigration(migration);
-        } else {
-          console.error(`[Migrations] Error en v${migration.version}:`, error);
-          throw error;
-        }
+        // Propagar el error para que el proceso de inicialización lo capture y no marque la DB como inicializada
+        throw error;
       }
     }
 

@@ -13,7 +13,7 @@ import { PedidoItem } from './pedido-item';
 import { CategoryHeader } from '@components/CategoryHeader';
 import { PedidoConfirmationModal } from './pedido-confirmation-modal';
 import LoadingScreen from '@components/LoadingScreen';
-import ScreenHeader from '@components/ScreenHeader';
+// Header is rendered by the parent `registro` screen
 import EmptyState from '@components/EmptyState';
 import { productService } from '@services/index';
 import FooterActions from '@components/FooterActions';
@@ -57,54 +57,14 @@ export function PedidosScreen() {
     }
   };
   const initialLoadDone = useRef(false);
-  // safe-area insets not used here anymore (FooterActions handles footer)
 
-  // Cargar productos agrupados por categoría cuando la DB esté lista o los productos cambien
-  // Se reconstruyen las secciones según temporales de pedidos o catálogo
   useEffect(() => {
     if (!dbReady) return;
 
-    const positivePedidos = tempPedidos.filter((p: TempPedido) => p.quantity > 0);
-
-    if (positivePedidos.length > 0) {
-      // Mostrar solo los productos incluidos en los pedidos del mes (lista de la compra)
-      const byCategory = new Map<number | null, Product[]>();
-
-      positivePedidos.forEach(p => {
-        const prod = products.find(pr => pr.name === p.product_name);
-        if (prod) {
-          const key = prod.category_id ?? null;
-          const arr = byCategory.get(key) || [];
-          arr.push(prod);
-          byCategory.set(key, arr);
-        } else {
-          // Producto no encontrado en catálogo (posible desactivado): crear un placeholder
-          const placeholder: Product = {
-            id: -1,
-            name: p.product_name,
-            unit: '',
-            active: false,
-            category_id: null,
-          };
-          const arr = byCategory.get(null) || [];
-          arr.push(placeholder);
-          byCategory.set(null, arr);
-        }
-      });
-
-      const grouped = Array.from(byCategory.entries()).map(([catId, list]) => ({
-        title: list[0].category_name || 'Sin categoría',
-        categoryId: catId,
-        data: list,
-      }));
-
-      setSections(grouped);
-      setLoadingSections(false);
-    } else {
-      // Si no hay pedidos temporales, mostrar todo el catálogo activo
+    if (sections.length === 0) {
       loadGroupedProducts();
     }
-  }, [dbReady, products, tempPedidos]);
+  }, [dbReady, products]);
 
   // Cargar pedidos existentes del mes actual al montar el componente
   useEffect(() => {
@@ -148,9 +108,9 @@ export function PedidosScreen() {
   const handleSaveReport = async () => {
     try {
       setSavingReport(true);
-      
+
       const pedidosToSave = tempPedidos.filter((pedido: TempPedido) => pedido.quantity > 0);
-      
+
       if (pedidosToSave.length === 0) {
         Alert.alert(
           'Sin datos',
@@ -166,13 +126,13 @@ export function PedidosScreen() {
       } else {
         await savePedidosReport(pedidosToSave);
       }
-      
+
       Alert.alert(
         'Pedidos Guardados',
         `Se han guardado los pedidos con ${pedidosToSave.length} productos.`,
         [{ text: 'OK' }]
       );
-      
+
       setShowConfirmModal(false);
       setIsEditMode(false);
       setEditingPedidoId(null);
@@ -190,7 +150,7 @@ export function PedidosScreen() {
   // Renderizar cada producto
   const renderProductItem = useCallback(({ item }: { item: Product }) => {
     const quantity = quantityMap.get(item.name) || 0;
-    
+
     return (
       <PedidoItem
         item={item}
@@ -208,44 +168,29 @@ export function PedidosScreen() {
     <CategoryHeader title={section.title} />
   ), []);
 
-  if (loading || loadingSections) {
+  // Mostrar pantalla de carga hasta que la DB esté lista y las secciones cargadas
+  if (!dbReady) {
+    return <LoadingScreen message="Inicializando base de datos..." />;
+  }
+
+  if (loadingSections) {
     return <LoadingScreen message="Cargando productos..." />;
   }
 
   const hasProducts = sections.some(section => section.data.length > 0);
 
-  // Obtener nombre del mes actual
-  const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-  const currentMonth = monthNames[new Date().getMonth()];
-  const currentYear = new Date().getFullYear();
-
-  // Determinar subtítulo del header
-  let subtitle = `${currentMonth} ${currentYear}`;
-  if (copiedFromPrevious) {
-    subtitle += ' - Copiado del mes anterior';
-  }
-
   return (
     <View style={styles.container}>
-      <ScreenHeader
-        title="Pedidos de Cocina"
-        subtitle={subtitle}
-        backgroundColor={PEDIDOS_COLOR}
-      />
-
       <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
         {editingPedidoId ? (
-              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={{ fontWeight: '700' }}>Editando pedido #{editingPedidoId}</Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontWeight: '700' }}>Editando pedido #{editingPedidoId}</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
               <AccessibleButton title="Salir edición" onPress={() => { setEditingPedidoId(null); setTempPedidos([]); setIsEditMode(false); }} variant="danger" />
               <AccessibleButton title="Seleccionar otro" onPress={debugOpenPedidoSelector} variant="secondary" style={{ backgroundColor: '#F47C1F' }} />
-                </View>
-              </View>
-            ) : (
+            </View>
+          </View>
+        ) : (
           // Make selector button visually prominent while debugging layout/visibility issues
           <AccessibleButton title="Seleccionar Pedido" onPress={debugOpenPedidoSelector} variant="secondary" style={{ backgroundColor: '#F47C1F' }} />
         )}

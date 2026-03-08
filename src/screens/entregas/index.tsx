@@ -8,9 +8,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useApp } from '@context/AppContext';
-import { Product, ProductSection, TempPedido, TempCount } from '@app-types/index';
+import { Product, ProductSection, TempCount } from '@app-types/index';
 import { colors } from '@theme/colors';
-import ScreenHeader from '@components/ScreenHeader';
 import FooterActions from '@components/FooterActions';
 import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
@@ -18,60 +17,26 @@ import { productService } from '@services/index';
 import { reportService } from '@services/index';
 import { CategoryHeader } from '@components/CategoryHeader';
 import EntregaItem from '@screens/entregas/entrega-item';
-import { PedidoItem } from '@screens/pedidos/pedido-item';
-  import { ConfirmationModal } from '@components/ConfirmationModal';
-import { PedidoConfirmationModal } from '@screens/pedidos/pedido-confirmation-modal';
+import { ConfirmationModal } from '@components/ConfirmationModal';
 import PedidoSelectorModal from '@screens/entregas/PedidoSelectorModal';
 
-type RegistroMode = 'pedidos' | 'entregas';
-
-const PEDIDOS_COLOR = colors.warning;
 const ENTREGAS_COLOR = colors.success;
-
-const MODE_CONFIG: Record<RegistroMode, {
-  label: string;
-  emoji: string;
-  color: string;
-  headerTitle: string;
-  subtitle?: string;
-}> = {
-  pedidos: {
-    label: 'Pedidos',
-    emoji: '📋',
-    color: PEDIDOS_COLOR,
-    headerTitle: 'Pedidos de Cocina',
-  },
-  entregas: {
-    label: 'Entregas',
-    emoji: '📦',
-    color: ENTREGAS_COLOR,
-    headerTitle: 'Entregas del Proveedor',
-    subtitle: 'Registra cada entrega del proveedor',
-  },
-};
 
 export default function EntregasScreen() {
   const {
-    tempPedidos,
-    updateTempPedido,
-    savePedidosReport,
     tempCounts,
     updateTempCount,
     saveEntregasReport,
-    loadCurrentMonthPedidos,
     loading,
     dbReady,
     products,
   } = useApp();
 
-  const [mode, setMode] = useState<RegistroMode>('pedidos');
   const [sections, setSections] = useState<ProductSection[]>([]);
   const [loadingSections, setLoadingSections] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
-  const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
-  const [editModes, setEditModes] = useState({ pedidos: false, entregas: false });
-  const initialPedidosLoad = useRef(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [pedidoModalVisible, setPedidoModalVisible] = useState(false);
   const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null);
   const [selectedPedidoDetails, setSelectedPedidoDetails] = useState<Map<string, number>>(new Map());
@@ -83,16 +48,9 @@ export default function EntregasScreen() {
   }, [dbReady, products]);
 
   useEffect(() => {
-    if (dbReady && !initialPedidosLoad.current) {
-      initialPedidosLoad.current = true;
-      loadPedidosData();
-    }
-  }, [dbReady]);
-
-  useEffect(() => {
     setShowConfirmModal(false);
     setSavingReport(false);
-  }, [mode]);
+  }, []);
 
   const loadGroupedProducts = async () => {
     try {
@@ -105,18 +63,6 @@ export default function EntregasScreen() {
       setLoadingSections(false);
     }
   };
-
-  const loadPedidosData = async () => {
-    try {
-      const source = await loadCurrentMonthPedidos();
-      setCopiedFromPrevious(source === 'previous');
-    } catch (error) {
-      console.error('[EntregasScreen] Error al cargar pedidos del mes:', error);
-      setCopiedFromPrevious(false);
-    }
-  };
-
-  const handleOpenPedidoSelector = () => setPedidoModalVisible(true);
 
   const handlePedidoSelected = async (id: number) => {
     try {
@@ -134,46 +80,24 @@ export default function EntregasScreen() {
 
   const quantityMap = useMemo(() => {
     const map = new Map<string, number>();
-    const source = mode === 'pedidos' ? tempPedidos : tempCounts;
-    source.forEach((item: TempPedido | TempCount) => map.set(item.product_name, item.quantity));
+    tempCounts.forEach((item: TempCount) => map.set(item.product_name, item.quantity));
     return map;
-  }, [mode, tempPedidos, tempCounts]);
-
-  const isEditMode = editModes[mode];
-
-  const handleToggleEditMode = () => {
-    setEditModes(prev => ({
-      ...prev,
-      [mode]: !prev[mode],
-    }));
-  };
-
-  const setEditMode = (value: boolean) => {
-    setEditModes(prev => ({
-      ...prev,
-      [mode]: value,
-    }));
-  };
+  }, [tempCounts]);
+  const handleToggleEditMode = () => setIsEditMode(prev => !prev);
+  const setEditMode = (value: boolean) => setIsEditMode(value);
 
   const handleSaveReport = async () => {
     try {
       setSavingReport(true);
-      const entries = (mode === 'pedidos' ? tempPedidos : tempCounts)
-        .filter(entry => entry.quantity > 0);
+      const entries = tempCounts.filter(entry => entry.quantity > 0);
 
       if (entries.length === 0) {
         Alert.alert('Sin datos', 'No hay cantidades registradas para guardar.', [{ text: 'OK' }]);
         return;
       }
 
-      if (mode === 'pedidos') {
-        await savePedidosReport(entries);
-        setCopiedFromPrevious(false);
-        Alert.alert('Pedido Guardado', `Se registraron ${entries.length} productos en el pedido del mes.`, [{ text: 'OK' }]);
-      } else {
-        await saveEntregasReport(entries, selectedPedidoId ?? null);
-        Alert.alert('Entregas Guardadas', `Se registraron ${entries.length} productos en las entregas.`, [{ text: 'OK' }]);
-      }
+      await saveEntregasReport(entries, selectedPedidoId ?? null);
+      Alert.alert('Entregas Guardadas', `Se registraron ${entries.length} productos en las entregas.`, [{ text: 'OK' }]);
 
       setShowConfirmModal(false);
       setEditMode(false);
@@ -186,21 +110,6 @@ export default function EntregasScreen() {
 
   const renderProductItem = useCallback(({ item }: { item: Product }) => {
     const quantity = quantityMap.get(item.name) || 0;
-
-    if (mode === 'pedidos') {
-      return (
-        <PedidoItem
-          item={item}
-          quantity={quantity}
-          isEditMode={isEditMode}
-          onDecrement={() => updateTempPedido(item.name, Math.max(0, quantity - 1))}
-          onIncrement={() => updateTempPedido(item.name, quantity + 1)}
-          onQuantityChange={(value: number) => updateTempPedido(item.name, value)}
-        />
-      );
-    }
-
-    // entregas
     return (
       <EntregaItem
         item={item}
@@ -212,7 +121,7 @@ export default function EntregasScreen() {
         pedidoQuantity={selectedPedidoDetails.get(item.name) || 0}
       />
     );
-  }, [mode, quantityMap, isEditMode, updateTempPedido, updateTempCount, selectedPedidoDetails]);
+  }, [quantityMap, isEditMode, updateTempCount, selectedPedidoDetails]);
 
   const renderSectionHeader = useCallback(({ section }: { section: ProductSection }) => (
     <CategoryHeader title={section.title} />
@@ -223,36 +132,14 @@ export default function EntregasScreen() {
   }
 
   const hasProducts = sections.some(section => section.data.length > 0);
-  const headerConfig = MODE_CONFIG[mode];
-  const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-  const currentMonthName = monthNames[new Date().getMonth()];
-  const currentYear = new Date().getFullYear();
-  const headerSubtitle = mode === 'pedidos'
-    ? copiedFromPrevious
-      ? `${currentMonthName} ${currentYear} - Copiado del mes anterior`
-      : `${currentMonthName} ${currentYear}`
-    : headerConfig.subtitle || '';
-
+  // month display handled by parent `registro` header
   return (
     <View style={styles.container}>
-      <ScreenHeader
-        title={headerConfig.headerTitle}
-        subtitle={headerSubtitle}
-        backgroundColor={headerConfig.color}
-      />
-
-      <ModeToggle mode={mode} onChange={setMode} />
-
-      {mode === 'entregas' && (
-        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
-          <TouchableOpacity onPress={handleOpenPedidoSelector} style={{ padding: 12, backgroundColor: '#FFF3E0', borderRadius: 10, alignItems: 'center' }}>
-            <Text style={{ fontWeight: '700' }}>{selectedPedidoId ? `Pedido seleccionado #${selectedPedidoId}` : 'Relacionar pedido'}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+        <TouchableOpacity onPress={() => setPedidoModalVisible(true)} style={{ padding: 12, backgroundColor: '#FFF3E0', borderRadius: 10, alignItems: 'center' }}>
+          <Text style={{ fontWeight: '700' }}>{selectedPedidoId ? `Pedido seleccionado #${selectedPedidoId}` : 'Relacionar pedido'}</Text>
+        </TouchableOpacity>
+      </View>
 
       {hasProducts ? (
         <SectionList
@@ -263,7 +150,7 @@ export default function EntregasScreen() {
           style={styles.productList}
           contentContainerStyle={styles.productListContent}
           showsVerticalScrollIndicator={false}
-          extraData={{ mode, isEditMode, quantityMap, selectedPedidoDetails }}
+          extraData={{ isEditMode, quantityMap, selectedPedidoDetails }}
           stickySectionHeadersEnabled={false}
         />
       ) : (
@@ -277,67 +164,21 @@ export default function EntregasScreen() {
         onToggleEdit={handleToggleEditMode}
         onSave={() => setShowConfirmModal(true)}
         saveDisabled={!isEditMode}
-        saveColor={headerConfig.color}
+        saveColor={ENTREGAS_COLOR}
       />
 
-      {mode === 'pedidos' ? (
-        <PedidoConfirmationModal
-          visible={showConfirmModal}
-          tempPedidos={tempPedidos}
-          saving={savingReport}
-          onCancel={() => setShowConfirmModal(false)}
-          onConfirm={handleSaveReport}
-        />
-      ) : (
-        <ConfirmationModal
-          visible={showConfirmModal}
-          items={tempCounts}
-          saving={savingReport}
-          onCancel={() => setShowConfirmModal(false)}
-          onConfirm={handleSaveReport}
-          title="Confirmar reporte de entregas"
-          subtitle="Se registrarán los siguientes productos como entregas:"
-          confirmButtonTitle="Guardar"
-          quantityColor={ENTREGAS_COLOR}
-        />
-      )}
+      <ConfirmationModal
+        visible={showConfirmModal}
+        items={tempCounts}
+        saving={savingReport}
+        onCancel={() => setShowConfirmModal(false)}
+        onConfirm={handleSaveReport}
+        title="Confirmar reporte de entregas"
+        subtitle="Se registrarán los siguientes productos como entregas:"
+        confirmButtonTitle="Guardar"
+        quantityColor={ENTREGAS_COLOR}
+      />
       <PedidoSelectorModal visible={pedidoModalVisible} onClose={() => setPedidoModalVisible(false)} onSelect={handlePedidoSelected} />
-    </View>
-  );
-}
-
-interface ModeToggleProps {
-  mode: RegistroMode;
-  onChange: (mode: RegistroMode) => void;
-}
-
-function ModeToggle({ mode, onChange }: ModeToggleProps) {
-  return (
-    <View style={styles.toggleContainer}>
-      {(Object.keys(MODE_CONFIG) as RegistroMode[]).map(option => {
-        const config = MODE_CONFIG[option];
-        const isActive = mode === option;
-        return (
-          <TouchableOpacity
-            key={option}
-            activeOpacity={0.9}
-            style={[
-              styles.toggleButton,
-              isActive && { backgroundColor: config.color, borderColor: config.color },
-            ]}
-            onPress={() => onChange(option)}
-          >
-            <Text
-              style={[
-                styles.toggleText,
-                isActive && styles.toggleTextActive,
-              ]}
-            >
-              {`${config.emoji} ${config.label}`}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
     </View>
   );
 }
@@ -349,7 +190,6 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: 'row',
-    gap: 12,
     paddingHorizontal: 16,
     marginTop: 8,
     marginBottom: 8
