@@ -18,7 +18,8 @@ import { reportService } from '@services/index';
 import { CategoryHeader } from '@components/CategoryHeader';
 import EntregaItem from '@screens/entregas/entrega-item';
 import { ConfirmationModal } from '@components/ConfirmationModal';
-import PedidoSelectorModal from '@screens/entregas/PedidoSelectorModal';
+import PedidoSelector from '@components/PedidoSelector';
+import ProductItemBase from '@/components/ProductItemBase';
 
 const ENTREGAS_COLOR = colors.success;
 
@@ -37,7 +38,6 @@ export default function EntregasScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [pedidoModalVisible, setPedidoModalVisible] = useState(false);
   const [selectedPedidoId, setSelectedPedidoId] = useState<number | null>(null);
   const [selectedPedidoDetails, setSelectedPedidoDetails] = useState<Map<string, number>>(new Map());
 
@@ -111,39 +111,58 @@ export default function EntregasScreen() {
   const renderProductItem = useCallback(({ item }: { item: Product }) => {
     const quantity = quantityMap.get(item.name) || 0;
     return (
-      <EntregaItem
+      <ProductItemBase
         item={item}
         quantity={quantity}
         isEditMode={isEditMode}
-        onDecrement={() => updateTempCount(item.name, Math.max(0, quantity - 1))}
-        onIncrement={() => updateTempCount(item.name, quantity + 1)}
-        onQuantityChange={(value: number) => updateTempCount(item.name, value)}
+        onDecrement={() => {
+          const current = quantityMap.get(item.name) || 0;
+          void updateTempCount(item.name, Math.max(0, current - 1));
+        }}
+        onIncrement={() => {
+          const current = quantityMap.get(item.name) || 0;
+          void updateTempCount(item.name, current + 1);
+        }}
+        onQuantityChange={(value: number) => { void updateTempCount(item.name, value); }}
         pedidoQuantity={selectedPedidoDetails.get(item.name) || 0}
       />
-    );
+    )
   }, [quantityMap, isEditMode, updateTempCount, selectedPedidoDetails]);
 
   const renderSectionHeader = useCallback(({ section }: { section: ProductSection }) => (
     <CategoryHeader title={section.title} />
   ), []);
 
+  // derive visible sections based on selected pedido
+  const filteredSections = useMemo(() => {
+    if (!selectedPedidoId) return [];
+    return sections
+      .map(s => ({ ...s, data: s.data.filter(p => selectedPedidoDetails.has(p.name)) }))
+      .filter(s => s.data.length > 0);
+  }, [sections, selectedPedidoDetails, selectedPedidoId]);
+
+  const hasProducts = filteredSections.some(section => section.data.length > 0);
+
   if (loading || loadingSections) {
     return <LoadingScreen message="Cargando productos..." />;
   }
 
-  const hasProducts = sections.some(section => section.data.length > 0);
   // month display handled by parent `registro` header
   return (
     <View style={styles.container}>
       <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
-        <TouchableOpacity onPress={() => setPedidoModalVisible(true)} style={{ padding: 12, backgroundColor: '#FFF3E0', borderRadius: 10, alignItems: 'center' }}>
-          <Text style={{ fontWeight: '700' }}>{selectedPedidoId ? `Pedido seleccionado #${selectedPedidoId}` : 'Relacionar pedido'}</Text>
-        </TouchableOpacity>
+        <PedidoSelector
+          onSelect={handlePedidoSelected}
+          selectedPedidoId={selectedPedidoId}
+          availableOnly={true}
+        />
       </View>
 
-      {hasProducts ? (
+      {selectedPedidoId == null ? (
+        <EmptyState message="Selecciona un pedido para ver sus productos" />
+      ) : hasProducts ? (
         <SectionList
-          sections={sections}
+          sections={filteredSections}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderProductItem}
           renderSectionHeader={renderSectionHeader}
@@ -159,13 +178,15 @@ export default function EntregasScreen() {
         />
       )}
 
-      <FooterActions
-        isEditMode={isEditMode}
-        onToggleEdit={handleToggleEditMode}
-        onSave={() => setShowConfirmModal(true)}
-        saveDisabled={!isEditMode}
-        saveColor={ENTREGAS_COLOR}
-      />
+      {selectedPedidoId != null && (
+        <FooterActions
+          isEditMode={isEditMode}
+          onToggleEdit={handleToggleEditMode}
+          onSave={() => setShowConfirmModal(true)}
+          saveDisabled={!isEditMode}
+          saveColor={ENTREGAS_COLOR}
+        />
+      )}
 
       <ConfirmationModal
         visible={showConfirmModal}
@@ -178,7 +199,6 @@ export default function EntregasScreen() {
         confirmButtonTitle="Guardar"
         quantityColor={ENTREGAS_COLOR}
       />
-      <PedidoSelectorModal visible={pedidoModalVisible} onClose={() => setPedidoModalVisible(false)} onSelect={handlePedidoSelected} />
     </View>
   );
 }

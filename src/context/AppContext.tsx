@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useState, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, useRef, useCallback, ReactNode } from 'react';
 import { Product, Category, Report, ReportDetail, TempCount, TempPedido, TempDesperdicio, InventoryWithProduct, BalanceMensual, MonthWithData, PedidosLoadSource, AppContextType, AppState, AppAction } from '@app-types/index';
 import { initializeDatabase } from '@database/index';
 import { productService, categoryService, inventoryService, reportService } from '@services/index';
@@ -146,6 +146,46 @@ export function AppProvider({ children }: AppProviderProps) {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     })();
+  }, []);
+
+  // memoized helpers to avoid changing identity on every render
+  const loadCurrentMonthPedidos = useCallback(async (): Promise<PedidosLoadSource> => {
+    try {
+      const current = await reportService.getCurrentMonthPedidosReport();
+      if (current) {
+        const temp = current.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
+        dispatch({ type: 'SET_TEMP_PEDIDOS', payload: temp });
+        await reportService.saveTempPedidos(temp);
+        return 'current';
+      }
+
+      const previous = await reportService.getPreviousMonthPedidosReport();
+      if (previous) {
+        const tempPrev = previous.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
+        dispatch({ type: 'SET_TEMP_PEDIDOS', payload: tempPrev });
+        await reportService.saveTempPedidos(tempPrev);
+        return 'previous';
+      }
+
+      dispatch({ type: 'SET_TEMP_PEDIDOS', payload: [] });
+      return 'none';
+    } catch (error) {
+      console.error('[AppContext] Error cargando pedidos del mes actual:', error);
+      return 'none';
+    }
+  }, []);
+
+  const updateTempPedido = useCallback(async (productName: string, quantity: number) => {
+    dispatch({ type: 'UPDATE_TEMP_PEDIDO', payload: { product_name: productName, quantity } as TempPedido });
+    try {
+      if (quantity <= 0) {
+        await reportService.removeTempPedido(productName);
+      } else {
+        await reportService.saveTempPedido(productName, quantity);
+      }
+    } catch (e) {
+      console.error('[AppContext] failed to persist temp pedido', e);
+    }
   }, []);
 
   const contextValue: AppContextType = {
@@ -325,6 +365,9 @@ export function AppProvider({ children }: AppProviderProps) {
     // Reportes (entregas)
     saveEntregasReport: async (tempCounts: TempCount[], relatedReportId?: number | null) => {
       await reportService.saveEntregasReport(tempCounts, relatedReportId ?? null);
+      // refresh global report list so history UI updates immediately
+      const reports = await reportService.getAllReports();
+      dispatch({ type: 'SET_REPORTS', payload: reports });
     },
     loadReports: async () => {
       const reports = await reportService.getAllReports();
@@ -336,45 +379,31 @@ export function AppProvider({ children }: AppProviderProps) {
 
     // Pedidos
     savePedidosReport: async (tempPedidos: TempPedido[], reportIdToEdit?: number | null) => {
-      await reportService.savePedidosReport(tempPedidos, reportIdToEdit ?? null);
+      const id = await reportService.savePedidosReport(tempPedidos, reportIdToEdit ?? null);
+      // reload reports after saving so history screen sees the new entry
+      const reports = await reportService.getAllReports();
+      dispatch({ type: 'SET_REPORTS', payload: reports });
+      return id;
     },
     setTempPedidos: (tempPedidos: TempPedido[]) => {
       dispatch({ type: 'SET_TEMP_PEDIDOS', payload: tempPedidos });
     },
-    loadCurrentMonthPedidos: async () => {
-      try {
-        // Intentar cargar reporte de pedidos del mes actual
-        const current = await reportService.getCurrentMonthPedidosReport();
-        if (current) {
-          const temp = current.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
-          // Actualizar estado y persistir temporales para recuperación si la app se cierra
-          dispatch({ type: 'SET_TEMP_PEDIDOS', payload: temp });
-          await reportService.saveTempPedidos(temp);
-          return 'current' as const;
-        }
-
-        // Si no existe, intentar cargar del mes anterior y copiarlo como temporales
-        const previous = await reportService.getPreviousMonthPedidosReport();
-        if (previous) {
-          const tempPrev = previous.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
-          dispatch({ type: 'SET_TEMP_PEDIDOS', payload: tempPrev });
-          await reportService.saveTempPedidos(tempPrev);
-          return 'previous' as const;
-        }
-
-        // No hay datos
-        dispatch({ type: 'SET_TEMP_PEDIDOS', payload: [] });
-        return 'none' as const;
-      } catch (error) {
-        console.error('[AppContext] Error cargando pedidos del mes actual:', error);
-        // En caso de error, no derribar la app; devolver 'none'
-        return 'none' as const;
-      }
-    },
+    // placeholder, replaced by stable callbacks defined below
+    loadCurrentMonthPedidos: async () => 'none' as const,
 
     // Temp counts
-    updateTempCount: (productName: string, quantity: number) => {
+    updateTempCount: async (productName: string, quantity: number) => {
+      // Optimistically update state so UI stays snappy
       dispatch({ type: 'UPDATE_TEMP_COUNT', payload: { product_name: productName, quantity } as TempCount });
+      try {
+        if (quantity <= 0) {
+          await reportService.removeTempCount(productName);
+        } else {
+          await reportService.saveTempCount(productName, quantity);
+        }
+      } catch (e) {
+        console.error('[AppContext] failed to persist temp count', e);
+      }
     },
     clearTempCounts: () => dispatch({ type: 'CLEAR_TEMP_COUNTS' }),
     loadTempCounts: async () => {
@@ -386,9 +415,7 @@ export function AppProvider({ children }: AppProviderProps) {
     },
 
     // Temp pedidos
-    updateTempPedido: (productName: string, quantity: number) => {
-      dispatch({ type: 'UPDATE_TEMP_PEDIDO', payload: { product_name: productName, quantity } as TempPedido });
-    },
+    updateTempPedido,
     clearTempPedidos: () => dispatch({ type: 'CLEAR_TEMP_PEDIDOS' }),
     loadTempPedidos: async () => {
       const list = await reportService.getTempPedidos();
@@ -415,7 +442,7 @@ export function AppProvider({ children }: AppProviderProps) {
       // fallback placeholder
       return 'report.csv';
     },
-    shareReport: async () => {},
+    shareReport: async () => { },
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

@@ -9,9 +9,13 @@ interface FooterActionsProps {
   onSave: () => void;
   saveDisabled?: boolean;
   saveColor?: string;
+  /**
+   * when true the edit/cancel button is disabled (cannot be toggled)
+   */
+  disableEdit?: boolean;
 }
 
-export default function FooterActions({ isEditMode, onToggleEdit, onSave, saveDisabled, saveColor }: FooterActionsProps) {
+export default function FooterActions({ isEditMode, onToggleEdit, onSave, saveDisabled, saveColor, disableEdit = false }: FooterActionsProps) {
   return (
     <View style={styles.footer}>
       <View style={styles.footerButtons}>
@@ -21,6 +25,7 @@ export default function FooterActions({ isEditMode, onToggleEdit, onSave, saveDi
           variant={isEditMode ? 'danger' : 'secondary'}
           style={styles.editButton}
           responsiveText
+          disabled={disableEdit}
         />
 
         <AccessibleButton

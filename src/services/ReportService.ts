@@ -37,7 +37,31 @@ class ReportService {
     * Obtiene solo reportes de pedidos.
     */
   async getPedidosReports(): Promise<Report[]> {
+    // legacy method returning all pedidos
     return reportRepository.findPedidos();
+  }
+
+  /**
+   * Returns only those pedidos that do not have any entregas linked to them.
+   * Used when the user must select a pedido antes de registrar entregas.
+   */
+  async getAvailablePedidos(): Promise<Report[]> {
+    return reportRepository.findPedidosWithoutEntregas();
+  }
+
+  /**
+   * Ids de pedidos que tienen entregas vinculadas.
+   */
+  async getPedidoIdsWithEntregas(): Promise<number[]> {
+    return reportRepository.findPedidoIdsWithEntregas();
+  }
+
+  /**
+   * Convenience boolean check whether a given pedido has entregas linked.
+   */
+  async hasEntregasForPedido(pedidoId: number): Promise<boolean> {
+    const ids = await this.getPedidoIdsWithEntregas();
+    return ids.includes(pedidoId);
   }
 
   /**
@@ -98,15 +122,14 @@ class ReportService {
       throw new Error('No hay productos con cantidades para guardar');
     }
 
-    // Si se pasa un reportId, actualizar ese reporte en particular
+    // Si se pasa un reportId, actualizar ese reporte en particular (modo edición explícito)
     if (typeof reportIdToEdit !== 'undefined' && reportIdToEdit !== null) {
       await reportRepository.updateReportDetails(reportIdToEdit, validPedidos);
       await tempPedidosRepository.clearAll();
       return reportIdToEdit;
     }
 
-    // Crear o actualizar el reporte de pedido del mes actual (comportamiento por defecto)
-    const reportId = await reportRepository.upsertPedidosReport(validPedidos);
+    const reportId = await reportRepository.createWithDetails(validPedidos, 'pedidos');
 
     // Limpiar pedidos temporales después de guardar exitosamente
     await tempPedidosRepository.clearAll();
