@@ -12,6 +12,8 @@ import { colors } from '@theme/colors';
 import ScreenHeader from '@components/ScreenHeader';
 import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
+import AccessibleButton from '@components/AccessibleButton';
+import SearchBar from '@components/SearchBar';
 import { productService, reportService } from '@services/index';
 import { CategoryHeader } from '@components/CategoryHeader';
 import ProductItemDesperdicio from '@screens/desperdicio/ProductItemDesperdicio';
@@ -35,6 +37,7 @@ export function DesperdicioScreen() {
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   // safe-area insets not used here anymore (FooterActions handles footer)
+  const [searchText, setSearchText] = useState('');
 
   // Load products grouped by category when the DB is ready
   useEffect(() => {
@@ -57,6 +60,17 @@ export function DesperdicioScreen() {
       setLoadingSections(false);
     }
   };
+
+  const filteredSections = useMemo(() => {
+    if (!searchText.trim()) return sections;
+    const term = searchText.toLowerCase().trim();
+    return sections
+      .map(section => ({
+        ...section,
+        data: section.data.filter(product => product.name.toLowerCase().includes(term)),
+      }))
+      .filter(section => section.data.length > 0);
+  }, [sections, searchText]);
 
   const quantityMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -169,9 +183,11 @@ export function DesperdicioScreen() {
         backgroundColor={colors.warning}
       />
 
-      {hasProducts ? (
+      <SearchBar value={searchText} onChangeText={setSearchText} />
+
+      {hasProducts && filteredSections.length > 0 ? (
         <SectionList
-          sections={sections}
+          sections={filteredSections}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderProductItem}
           renderSectionHeader={renderSectionHeader}
@@ -182,7 +198,9 @@ export function DesperdicioScreen() {
         />
       ) : (
         <EmptyState
-          message="No se encontraron productos. Agrega productos desde el catálogo."
+          message={searchText.trim()
+            ? 'No se encontraron productos con ese nombre.'
+            : 'No se encontraron productos. Agrega productos desde el catálogo.'}
         />
       )}
 
