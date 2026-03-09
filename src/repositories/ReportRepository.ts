@@ -42,6 +42,38 @@ class ReportRepository extends BaseRepository<Report> {
   }
 
   /**
+   * Lista los ids de pedidos que ya tienen entregas relacionadas.
+   * Se usa para deshabilitar selección/edición en la UI.
+   */
+  async findPedidoIdsWithEntregas(): Promise<number[]> {
+    const rows = await this.rawQuery<{id: number}>(
+      `SELECT DISTINCT related_report_id AS id
+       FROM reports
+       WHERE type = 'entregas' AND related_report_id IS NOT NULL`,
+      []
+    );
+    return rows.map(r => r.id);
+  }
+
+  /**
+   * Retrieves all pedido reports that have no entregas linked to them.
+   * This excludes any pedido with at least one entrega whose related_report_id
+   * points to the pedido's id.
+   */
+  async findPedidosWithoutEntregas(): Promise<Report[]> {
+    return this.rawQuery<Report>(
+      `SELECT p.* FROM reports p
+       WHERE p.type = 'pedidos'
+         AND NOT EXISTS (
+           SELECT 1 FROM reports e
+           WHERE e.type = 'entregas' AND e.related_report_id = p.id
+         )
+       ORDER BY p.date DESC`,
+      []
+    );
+  }
+
+  /**
    * Crea un nuevo reporte con sus detalles.
    * Usa transacción para garantizar consistencia.
    * @param counts - Conteos de productos
@@ -254,8 +286,15 @@ class ReportRepository extends BaseRepository<Report> {
 
    /**
     * Crea o actualiza el reporte de pedidos del mes actual.
-    * Si ya existe un reporte de pedidos para este mes, lo actualiza.
-    * Si no existe, crea uno nuevo.
+    *
+    * NOTA IMPORTANTE: la implementación de `savePedidosReport` en el
+    * servicio dejó de utilizar este método cuando se guarda un pedido sin
+    * identificador; ahora siempre crea uno nuevo.  Este método permanece por
+    * compatibilidad y para usos avanzados donde realmente se desea
+    * consolidar informes mensuales.
+    *
+    * Si ya existe un reporte para el mes actual, lo actualiza; de lo
+    * contrario, inserta uno nuevo.
     * @param counts - Conteos de productos
     * @returns ID del reporte (nuevo o existente)
     */

@@ -331,17 +331,17 @@ export interface AppContextType {
   getReportDetails: (reportId: number) => Promise<ReportDetail[]>;
   
   // Funciones para pedidos
-  savePedidosReport: (tempPedidos: TempPedido[], reportIdToEdit?: number | null) => Promise<void>;
+  savePedidosReport: (tempPedidos: TempPedido[], reportIdToEdit?: number | null) => Promise<number>;
   loadCurrentMonthPedidos: () => Promise<PedidosLoadSource>;
   
   // Funciones para conteo temporal (entregas)
-  updateTempCount: (productName: string, quantity: number) => void;
+  updateTempCount: (productName: string, quantity: number) => Promise<void>;
   clearTempCounts: () => void;
   loadTempCounts: () => Promise<void>;
   saveTempCounts: () => Promise<void>;
   
   // Funciones para pedidos temporales
-  updateTempPedido: (productName: string, quantity: number) => void;
+  updateTempPedido: (productName: string, quantity: number) => Promise<void>;
   clearTempPedidos: () => void;
   loadTempPedidos: () => Promise<void>;
   saveTempPedidos: () => Promise<void>;

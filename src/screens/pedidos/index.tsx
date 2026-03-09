@@ -17,45 +17,44 @@ import LoadingScreen from '@components/LoadingScreen';
 import EmptyState from '@components/EmptyState';
 import { productService } from '@services/index';
 import FooterActions from '@components/FooterActions';
-import PedidoSelectorModal from '@screens/entregas/PedidoSelectorModal';
+import PedidoSelector from '@components/PedidoSelector';
 import { reportService } from '@services/index';
 import AccessibleButton from '@/components/AccessibleButton';
+import ProductItemBase from '@/components/ProductItemBase';
 
 // Color para la pantalla de pedidos
 const PEDIDOS_COLOR = colors.warning;
 
 export function PedidosScreen() {
-  const { tempPedidos, updateTempPedido, savePedidosReport, loadCurrentMonthPedidos, loading, dbReady, products, setTempPedidos } = useApp();
+  const { tempPedidos, updateTempPedido, savePedidosReport, loadCurrentMonthPedidos, dbReady, products, setTempPedidos } = useApp();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [sections, setSections] = useState<ProductSection[]>([]);
   const [loadingSections, setLoadingSections] = useState(true);
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
-  const [pedidoModalVisible, setPedidoModalVisible] = useState(false);
   const [editingPedidoId, setEditingPedidoId] = useState<number | null>(null);
+  const [pedidoHasEntregas, setPedidoHasEntregas] = useState(false);
 
-  const openPedidoSelector = () => setPedidoModalVisible(true);
-  // Debug helper: trace when selector is opened
-  const debugOpenPedidoSelector = () => {
-    console.log('[Pedidos] openPedidoSelector called');
-    openPedidoSelector();
-  };
 
   const handlePedidoSelected = async (id: number) => {
     try {
       const res = await reportService.getReportWithDetails(id);
+      const hasEnt = await reportService.hasEntregasForPedido(id);
+      setPedidoHasEntregas(hasEnt);
+
       if (res) {
         const temp = res.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
         setTempPedidos(temp);
         setEditingPedidoId(id);
-        setPedidoModalVisible(false);
-        setIsEditMode(true);
+        // only enable editing when there are no entregas linked
+        setIsEditMode(!hasEnt);
       }
     } catch (err) {
       console.error('Error loading pedido details', err);
     }
   };
+
   const initialLoadDone = useRef(false);
 
   useEffect(() => {
@@ -123,19 +122,25 @@ export function PedidosScreen() {
       // Si estamos editando un pedido concreto, pasar su id para actualizar
       if (editingPedidoId) {
         await savePedidosReport(pedidosToSave, editingPedidoId);
+        Alert.alert(
+          'Pedidos Actualizados',
+          `Se actualizó el pedido #${editingPedidoId} con ${pedidosToSave.length} productos.`,
+          [{ text: 'OK' }]
+        );
       } else {
-        await savePedidosReport(pedidosToSave);
+        const newId = await savePedidosReport(pedidosToSave);
+        Alert.alert(
+          'Pedidos Guardados',
+          `Se creó el pedido #${newId} con ${pedidosToSave.length} productos.`,
+          [{ text: 'OK' }]
+        );
       }
-
-      Alert.alert(
-        'Pedidos Guardados',
-        `Se han guardado los pedidos con ${pedidosToSave.length} productos.`,
-        [{ text: 'OK' }]
-      );
 
       setShowConfirmModal(false);
       setIsEditMode(false);
       setEditingPedidoId(null);
+      setTempPedidos([]);
+      setPedidoHasEntregas(false); // reset warning after save
     } catch (error) {
       Alert.alert(
         'Error',
@@ -152,15 +157,22 @@ export function PedidosScreen() {
     const quantity = quantityMap.get(item.name) || 0;
 
     return (
-      <PedidoItem
+      <ProductItemBase
         item={item}
         quantity={quantity}
         isEditMode={isEditMode}
-        onDecrement={() => updateTempPedido(item.name, Math.max(0, quantity - 1))}
-        onIncrement={() => updateTempPedido(item.name, quantity + 1)}
-        onQuantityChange={(value: number) => updateTempPedido(item.name, value)}
+        onDecrement={() => {
+          const current = quantityMap.get(item.name) || 0;
+          void updateTempPedido(item.name, Math.max(0, current - 1));
+        }}
+        onIncrement={() => {
+          const current = quantityMap.get(item.name) || 0;
+          void updateTempPedido(item.name, current + 1);
+        }}
+        onQuantityChange={(value: number) => { void updateTempPedido(item.name, value); }}
+        showStock={false}
       />
-    );
+    )
   }, [quantityMap, updateTempPedido, isEditMode]);
 
   // Renderizar header de categoría
@@ -183,16 +195,34 @@ export function PedidosScreen() {
     <View style={styles.container}>
       <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
         {editingPedidoId ? (
-          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ fontWeight: '700' }}>Editando pedido #{editingPedidoId}</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <AccessibleButton title="Salir edición" onPress={() => { setEditingPedidoId(null); setTempPedidos([]); setIsEditMode(false); }} variant="danger" />
-              <AccessibleButton title="Seleccionar otro" onPress={debugOpenPedidoSelector} variant="secondary" style={{ backgroundColor: '#F47C1F' }} />
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            <View style={{ flex: 3 }}>
+              <PedidoSelector onSelect={handlePedidoSelected} selectedPedidoId={editingPedidoId} editing={!!editingPedidoId} buttonVariant="success" allowSelectDisabled />
             </View>
+            <AccessibleButton
+              title="Cancelar"
+              onPress={() => {
+                setEditingPedidoId(null);
+                setTempPedidos([]);
+                setIsEditMode(false);
+                setPedidoHasEntregas(false);
+              }}
+              variant="danger"
+              style={{ flex: 1 }}
+            />
           </View>
         ) : (
-          // Make selector button visually prominent while debugging layout/visibility issues
-          <AccessibleButton title="Seleccionar Pedido" onPress={debugOpenPedidoSelector} variant="secondary" style={{ backgroundColor: '#F47C1F' }} />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <PedidoSelector
+                onSelect={handlePedidoSelected}
+                selectedPedidoId={editingPedidoId}
+                editing={!!editingPedidoId}
+                buttonVariant="success"
+                allowSelectDisabled
+              />
+            </View>
+          </View>
         )}
       </View>
 
@@ -214,11 +244,24 @@ export function PedidosScreen() {
         />
       )}
 
+      {pedidoHasEntregas && (
+        <View style={styles.containerWarningEntregas}>
+          <Text style={styles.textWarningEntregas}>
+            Este pedido no puede editarse, ya tiene entregas asociadas.
+          </Text>
+        </View>
+      )}
+
       <FooterActions
         isEditMode={isEditMode}
-        onToggleEdit={() => setIsEditMode(!isEditMode)}
+        disableEdit={pedidoHasEntregas}
+        onToggleEdit={() => {
+          if (!pedidoHasEntregas) {
+            setIsEditMode(!isEditMode);
+          }
+        }}
         onSave={() => setShowConfirmModal(true)}
-        saveDisabled={!isEditMode}
+        saveDisabled={!isEditMode || pedidoHasEntregas}
         saveColor={PEDIDOS_COLOR}
       />
 
@@ -229,7 +272,6 @@ export function PedidosScreen() {
         onCancel={() => setShowConfirmModal(false)}
         onConfirm={handleSaveReport}
       />
-      <PedidoSelectorModal visible={pedidoModalVisible} onClose={() => setPedidoModalVisible(false)} onSelect={handlePedidoSelected} />
     </View>
   );
 }
@@ -247,4 +289,14 @@ const styles = StyleSheet.create({
   productListContent: {
     paddingBottom: 20,
   },
+  containerWarningEntregas: {
+    margin: 4,
+    borderColor: colors.error,
+    borderBottomWidth: 2,
+  },
+  textWarningEntregas: {
+    textAlign: 'center',
+    color: colors.error,
+    padding: 2
+  }
 });

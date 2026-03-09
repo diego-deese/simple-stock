@@ -21,6 +21,12 @@ export default function RegistroScreen() {
   const [mode, setMode] = useState<RegistroMode>('pedidos');
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
 
+  // only reload pedidos once when the database becomes ready
+  // previously we depended on `loadCurrentMonthPedidos` which is recreated
+  // on every context update; that caused the effect to fire on each state
+  // change and reload the temp list from the database, wiping out any
+  // in‑progress edits.  Removing it from the deps (and using a ref to guard
+  // against updates) stops the unwanted resets.
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -34,7 +40,7 @@ export default function RegistroScreen() {
     };
     load();
     return () => { mounted = false; };
-  }, [dbReady, loadCurrentMonthPedidos]);
+  }, [dbReady]);
 
   const monthNames = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
