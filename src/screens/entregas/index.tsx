@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempCount } from '@app-types/index';
+import { fuzzyMatch } from '@helpers/fuzzy';
 import { colors } from '@theme/colors';
 import FooterActions from '@components/FooterActions';
 import LoadingScreen from '@components/LoadingScreen';
@@ -23,7 +24,11 @@ import ProductItemBase from '@/components/ProductItemBase';
 
 const ENTREGAS_COLOR = colors.success;
 
-export default function EntregasScreen() {
+interface EntregasScreenProps {
+  searchTerm?: string;
+}
+
+export default function EntregasScreen({ searchTerm = '' }: EntregasScreenProps) {
   const {
     tempCounts,
     updateTempCount,
@@ -136,10 +141,25 @@ export default function EntregasScreen() {
   // derive visible sections based on selected pedido
   const filteredSections = useMemo(() => {
     if (!selectedPedidoId) return [];
-    return sections
+
+    // start with sections limited to products from the selected pedido
+    let base = sections
       .map(s => ({ ...s, data: s.data.filter(p => selectedPedidoDetails.has(p.name)) }))
       .filter(s => s.data.length > 0);
-  }, [sections, selectedPedidoDetails, selectedPedidoId]);
+
+    // apply search fuzzy filter if term provided
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      base = base
+        .map(s => ({
+          ...s,
+          data: s.data.filter(p => fuzzyMatch(p.name, term)),
+        }))
+        .filter(s => s.data.length > 0);
+    }
+
+    return base;
+  }, [sections, selectedPedidoDetails, selectedPedidoId, searchTerm]);
 
   const hasProducts = filteredSections.some(section => section.data.length > 0);
 
@@ -147,36 +167,42 @@ export default function EntregasScreen() {
     return <LoadingScreen message="Cargando productos..." />;
   }
 
-  // month display handled by parent `registro` header
   return (
     <View style={styles.container}>
-      <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+      <View style={{ flex: 1 }}><View style={{ paddingHorizontal: 16, marginTop: 8 }}>
         <PedidoSelector
           onSelect={handlePedidoSelected}
           selectedPedidoId={selectedPedidoId}
           availableOnly={true}
         />
+        {searchTerm.trim().length > 0 && (
+          <View style={styles.searchInfo}>
+            <Text style={styles.searchInfoText}>Buscando: {searchTerm}</Text>
+          </View>
+        )}
       </View>
-
-      {selectedPedidoId == null ? (
-        <EmptyState message="Selecciona un pedido para ver sus productos" />
-      ) : hasProducts ? (
-        <SectionList
-          sections={filteredSections}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderProductItem}
-          renderSectionHeader={renderSectionHeader}
-          style={styles.productList}
-          contentContainerStyle={styles.productListContent}
-          showsVerticalScrollIndicator={false}
-          extraData={{ isEditMode, quantityMap, selectedPedidoDetails }}
-          stickySectionHeadersEnabled={false}
-        />
-      ) : (
-        <EmptyState
-          message="No hay productos registrados. Agrega productos desde el catálogo."
-        />
-      )}
+        {selectedPedidoId == null ? (
+          <EmptyState message="Selecciona un pedido para ver sus productos" />
+        ) : hasProducts ? (
+          <SectionList
+            sections={filteredSections}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderProductItem}
+            renderSectionHeader={renderSectionHeader}
+            style={styles.productList}
+            contentContainerStyle={styles.productListContent}
+            showsVerticalScrollIndicator={false}
+            extraData={{ isEditMode, quantityMap, selectedPedidoDetails }}
+            stickySectionHeadersEnabled={false}
+          />
+        ) : (
+          <EmptyState
+            message={searchTerm.trim()
+              ? 'No se encontraron productos con ese nombre.'
+              : 'No hay productos registrados. Agrega productos desde el catálogo.'}
+          />
+        )}
+      </View>
 
       {selectedPedidoId != null && (
         <FooterActions
@@ -207,6 +233,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    justifyContent: 'space-between',
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -228,6 +255,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  searchInfo: {
+    marginTop: 8,
+  },
+  searchInfoText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
   toggleTextActive: {
     color: colors.white,

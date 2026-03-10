@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Modal } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import EntregasScreen from '@screens/entregas';
 import { PedidosScreen } from '@screens/pedidos';
+import SearchBar from '@components/SearchBar';
 import { colors } from '@theme/colors';
 import ScreenHeader from '@components/ScreenHeader';
 import { useApp } from '@context/AppContext';
@@ -20,6 +22,10 @@ export default function RegistroScreen() {
   const { loadCurrentMonthPedidos, dbReady } = useApp();
   const [mode, setMode] = useState<RegistroMode>('pedidos');
   const [copiedFromPrevious, setCopiedFromPrevious] = useState(false);
+
+  // search state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   // only reload pedidos once when the database becomes ready
   // previously we depended on `loadCurrentMonthPedidos` which is recreated
@@ -54,16 +60,44 @@ export default function RegistroScreen() {
     ? (copiedFromPrevious ? `${currentMonthName} ${currentYear} - Copiado del mes anterior` : `${currentMonthName} ${currentYear}`)
     : (headerConfig.label === 'Entregas' ? 'Registra cada entrega del proveedor' : '');
 
+  const startSearch = () => setIsSearching(true);
+  const cancelSearch = () => {
+    setIsSearching(false);
+    setSearchTerm('');
+  };
+
+  const renderHeaderRight = () => {
+    if (isSearching) {
+      return (
+        <TouchableOpacity onPress={cancelSearch} style={{ padding: 8 }}>
+          <MaterialIcons name="close" size={28} color="white" />
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <TouchableOpacity onPress={startSearch} style={{ padding: 8 }}>
+        <MaterialIcons name="search" size={28} color="white" />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <ScreenHeader title={headerConfig.label === 'Pedidos' ? 'Pedidos de Cocina' : headerConfig.label} subtitle={headerSubtitle} backgroundColor={headerConfig.color} />
+      <ScreenHeader
+        title={headerConfig.label === 'Pedidos' ? 'Pedidos de Cocina' : headerConfig.label}
+        subtitle={headerSubtitle}
+        backgroundColor={headerConfig.color}
+        rightComponent={renderHeaderRight()}
+        customTitle={isSearching ? <SearchBar value={searchTerm} onChangeText={setSearchTerm} placeholder="Buscar producto..." /> : undefined}
+      />
 
       <ModeToggle mode={mode} onChange={setMode} />
 
+
       {mode === 'pedidos' ? (
-        <PedidosScreen />
+        <PedidosScreen searchTerm={searchTerm} />
       ) : (
-        <EntregasScreen />
+        <EntregasScreen searchTerm={searchTerm} />
       )}
     </View>
   );

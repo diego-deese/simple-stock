@@ -26,9 +26,6 @@ export default function SearchBar({ value, onChangeText, placeholder = 'Buscar p
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
   },
   input: {
     backgroundColor: colors.white,
