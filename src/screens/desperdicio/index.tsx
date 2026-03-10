@@ -5,7 +5,9 @@ import {
   SectionList,
   Text,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempDesperdicio } from '@app-types/index';
 import { colors } from '@theme/colors';
@@ -37,7 +39,8 @@ export function DesperdicioScreen() {
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   // safe-area insets not used here anymore (FooterActions handles footer)
-  const [searchText, setSearchText] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   // Load products grouped by category when the DB is ready
   useEffect(() => {
@@ -62,15 +65,15 @@ export function DesperdicioScreen() {
   };
 
   const filteredSections = useMemo(() => {
-    if (!searchText.trim()) return sections;
-    const term = searchText.toLowerCase().trim();
+    if (!searchTerm.trim()) return sections;
+    const term = searchTerm.toLowerCase().trim();
     return sections
       .map(section => ({
         ...section,
         data: section.data.filter(product => product.name.toLowerCase().includes(term)),
       }))
       .filter(section => section.data.length > 0);
-  }, [sections, searchText]);
+  }, [sections, searchTerm]);
 
   const quantityMap = useMemo(() => {
     const map = new Map<string, number>();
@@ -112,8 +115,8 @@ export function DesperdicioScreen() {
 
       if (entries.length === 0) {
         Alert.alert(
-          'No Data',
-          'No quantities recorded to save.',
+          'Sin datos',
+          'No hay cantidades registradas para guardar.',
           [{ text: 'OK' }]
         );
         return;
@@ -121,15 +124,15 @@ export function DesperdicioScreen() {
 
       await saveDesperdicioReport(entries);
       Alert.alert(
-        'Desperdicio Saved',
-        `Recorded ${entries.length} products in desperdicio report.`,
+        'Desperdicio guardado',
+        `Se registraron ${entries.length} productos en el reporte de desperdicio.`,
         [{ text: 'OK' }]
       );
       setShowConfirmModal(false);
     } catch (error) {
       Alert.alert(
         'Error',
-        'Failed to save desperdicio report. Try again.',
+        'No se pudo guardar el reporte de desperdicio. Intenta de nuevo.',
         [{ text: 'OK' }]
       );
     } finally {
@@ -173,17 +176,35 @@ export function DesperdicioScreen() {
     return <LoadingScreen message="Cargando productos..." />;
   }
 
-  const hasProducts = sections.some(section => section.data.length > 0);
+  const hasProducts = filteredSections.some(section => section.data.length > 0);
 
   return (
     <View style={styles.container}>
+      {/* header with conditional search bar */}
       <ScreenHeader
         title="Desperdicio"
-        subtitle="Registrar productos desperdiciados del mes"
+        subtitle="Productos desperdiciados del mes"
         backgroundColor={colors.warning}
+        rightComponent={
+          isSearching ? (
+            <TouchableOpacity onPress={() => { setIsSearching(false); setSearchTerm(''); }} style={{ padding: 8 }}>
+              <MaterialIcons name="close" size={28} color="white" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => setIsSearching(true)} style={{ padding: 8 }}>
+              <MaterialIcons name="search" size={28} color="white" />
+            </TouchableOpacity>
+          )
+        }
+        customTitle={isSearching ? <SearchBar value={searchTerm} onChangeText={setSearchTerm} placeholder="Buscar producto..." /> : undefined}
       />
 
-      <SearchBar value={searchText} onChangeText={setSearchText} />
+      {/* show term indicator below header */}
+      {searchTerm.trim().length > 0 && (
+        <View style={styles.searchInfo}>
+          <Text style={styles.searchInfoText}>Buscando: {searchTerm}</Text>
+        </View>
+      )}
 
       {hasProducts && filteredSections.length > 0 ? (
         <SectionList
@@ -198,7 +219,7 @@ export function DesperdicioScreen() {
         />
       ) : (
         <EmptyState
-          message={searchText.trim()
+          message={searchTerm.trim()
             ? 'No se encontraron productos con ese nombre.'
             : 'No se encontraron productos. Agrega productos desde el catálogo.'}
         />
@@ -219,7 +240,7 @@ export function DesperdicioScreen() {
         onConfirm={handleSaveReport}
         title="Confirmar reporte de desperdicio"
         subtitle="Se registrarán los siguientes productos como desperdicio:"
-        confirmButtonTitle="Guardar reporte"
+        confirmButtonTitle="Guardar"
       />
     </View>
   );
@@ -229,6 +250,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    justifyContent: 'space-between',
   },
   productList: {
     flex: 1,
@@ -237,6 +259,14 @@ const styles = StyleSheet.create({
   },
   productListContent: {
     paddingBottom: 20,
+  },
+  searchInfo: {
+    marginTop: 8,
+  },
+  searchInfoText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
 });
 

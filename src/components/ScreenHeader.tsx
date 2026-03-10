@@ -10,6 +10,7 @@ interface ScreenHeaderProps {
   showBackButton?: boolean;
   backRoute?: string;
   rightComponent?: ReactNode;
+  customTitle?: ReactNode;
 }
 
 export default function ScreenHeader({
@@ -19,6 +20,7 @@ export default function ScreenHeader({
   showBackButton = false,
   backRoute = '/admin',
   rightComponent,
+  customTitle,
 }: ScreenHeaderProps) {
   const router = useRouter();
 
@@ -32,15 +34,24 @@ export default function ScreenHeader({
           <Text style={styles.backButtonText}>← Volver</Text>
         </TouchableOpacity>
       )}
-      
-      <View style={styles.titleRow}>
+
+      <View style={[
+        styles.titleRow,
+        customTitle ? styles.titleRowCentered : null,
+      ]}>
         <View style={styles.titleContainer}>
-          <Text style={styles.headerTitle}>{title}</Text>
-          {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
+          {customTitle ? (
+            customTitle
+          ) : (
+            <>
+              <Text style={styles.headerTitle}>{title}</Text>
+              {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
+            </>
+          )}
         </View>
-        
+
         {rightComponent && (
-          <View style={styles.rightContainer}>
+          <View style={styles.rightComponentContainer}>
             {rightComponent}
           </View>
         )}
@@ -54,6 +65,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
+    minHeight: 150,
   },
   backButton: {
     marginBottom: 12,
@@ -65,8 +77,11 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    minHeight: 70
+  },
+  titleRowCentered: {
+    alignItems: 'center',
   },
   titleContainer: {
     flex: 1,
@@ -81,7 +96,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.8)',
   },
-  rightContainer: {
-    marginLeft: 16,
-  },
+  rightComponentContainer: {
+    marginStart: 16
+  }
 });

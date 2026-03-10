@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useApp } from '@context/AppContext';
 import { Product, ProductSection, TempPedido } from '@app-types/index';
+import { fuzzyMatch } from '@helpers/fuzzy';
 import { colors } from '@theme/colors';
 import { PedidoItem } from './pedido-item';
 import { CategoryHeader } from '@components/CategoryHeader';
@@ -25,8 +26,14 @@ import ProductItemBase from '@/components/ProductItemBase';
 // Color para la pantalla de pedidos
 const PEDIDOS_COLOR = colors.warning;
 
-export function PedidosScreen() {
+interface PedidosScreenProps {
+  searchTerm?: string;
+}
+
+export function PedidosScreen({ searchTerm = '' }: PedidosScreenProps) {
   const { tempPedidos, updateTempPedido, savePedidosReport, loadCurrentMonthPedidos, dbReady, products, setTempPedidos } = useApp();
+  // search term passed from parent
+  // it may be empty string by default
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -47,8 +54,6 @@ export function PedidosScreen() {
         const temp = res.details.map(d => ({ product_name: d.product_name, quantity: d.quantity }));
         setTempPedidos(temp);
         setEditingPedidoId(id);
-        // only enable editing when there are no entregas linked
-        setIsEditMode(!hasEnt);
       }
     } catch (err) {
       console.error('Error loading pedido details', err);
@@ -180,6 +185,20 @@ export function PedidosScreen() {
     <CategoryHeader title={section.title} />
   ), []);
 
+  // apply search filter using fuzzy matching if a term is provided
+  const filteredSections = useMemo(() => {
+    if (!searchTerm.trim()) return sections;
+    const term = searchTerm.toLowerCase().trim();
+    return sections
+      .map(section => ({
+        ...section,
+        data: section.data.filter(p => fuzzyMatch(p.name, term)),
+      }))
+      .filter(section => section.data.length > 0);
+  }, [sections, searchTerm]);
+
+  const hasProducts = filteredSections.some(section => section.data.length > 0);
+
   // Mostrar pantalla de carga hasta que la DB esté lista y las secciones cargadas
   if (!dbReady) {
     return <LoadingScreen message="Inicializando base de datos..." />;
@@ -189,68 +208,76 @@ export function PedidosScreen() {
     return <LoadingScreen message="Cargando productos..." />;
   }
 
-  const hasProducts = sections.some(section => section.data.length > 0);
-
   return (
     <View style={styles.container}>
-      <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
-        {editingPedidoId ? (
-          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-            <View style={{ flex: 3 }}>
-              <PedidoSelector onSelect={handlePedidoSelected} selectedPedidoId={editingPedidoId} editing={!!editingPedidoId} buttonVariant="success" allowSelectDisabled />
-            </View>
-            <AccessibleButton
-              title="Cancelar"
-              onPress={() => {
-                setEditingPedidoId(null);
-                setTempPedidos([]);
-                setIsEditMode(false);
-                setPedidoHasEntregas(false);
-              }}
-              variant="danger"
-              style={{ flex: 1 }}
-            />
-          </View>
-        ) : (
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <View style={{ flex: 1 }}>
-              <PedidoSelector
-                onSelect={handlePedidoSelected}
-                selectedPedidoId={editingPedidoId}
-                editing={!!editingPedidoId}
-                buttonVariant="success"
-                allowSelectDisabled
+      <View style={{ flex: 1 }}>
+        <View style={{ paddingHorizontal: 16, marginVertical: 8 }}>
+          {editingPedidoId ? (
+            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+              <View style={{ flex: 3 }}>
+                <PedidoSelector onSelect={handlePedidoSelected} selectedPedidoId={editingPedidoId} editing={!!editingPedidoId} buttonVariant="success" allowSelectDisabled />
+              </View>
+              <AccessibleButton
+                title="Cancelar"
+                onPress={() => {
+                  setEditingPedidoId(null);
+                  setTempPedidos([]);
+                  setIsEditMode(false);
+                  setPedidoHasEntregas(false);
+                }}
+                variant="danger"
+                style={{ flex: 1 }}
               />
             </View>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flex: 1 }}>
+                <PedidoSelector
+                  onSelect={handlePedidoSelected}
+                  selectedPedidoId={editingPedidoId}
+                  editing={!!editingPedidoId}
+                  buttonVariant="success"
+                  allowSelectDisabled
+                />
+              </View>
+            </View>
+          )}
+
+          {searchTerm.trim().length > 0 && (
+            <View style={styles.searchInfo}>
+              <Text style={styles.searchInfoText}>Buscando: {searchTerm}</Text>
+            </View>
+          )}
+        </View>
+
+        {hasProducts ? (
+          <SectionList
+            sections={filteredSections}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderProductItem}
+            renderSectionHeader={renderSectionHeader}
+            style={styles.productList}
+            contentContainerStyle={styles.productListContent}
+            showsVerticalScrollIndicator={false}
+            extraData={quantityMap}
+            stickySectionHeadersEnabled={false}
+          />
+        ) : (
+          <EmptyState
+            message={searchTerm.trim()
+              ? 'No se encontraron productos con ese nombre.'
+              : 'No hay productos registrados. Agrega productos desde el catálogo.'}
+          />
+        )}
+
+        {pedidoHasEntregas && (
+          <View style={styles.containerWarningEntregas}>
+            <Text style={styles.textWarningEntregas}>
+              Este pedido no puede editarse, ya tiene entregas asociadas.
+            </Text>
           </View>
         )}
       </View>
-
-      {hasProducts ? (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderProductItem}
-          renderSectionHeader={renderSectionHeader}
-          style={styles.productList}
-          contentContainerStyle={styles.productListContent}
-          showsVerticalScrollIndicator={false}
-          extraData={quantityMap}
-          stickySectionHeadersEnabled={false}
-        />
-      ) : (
-        <EmptyState
-          message="No hay productos registrados. Agrega productos desde el catálogo."
-        />
-      )}
-
-      {pedidoHasEntregas && (
-        <View style={styles.containerWarningEntregas}>
-          <Text style={styles.textWarningEntregas}>
-            Este pedido no puede editarse, ya tiene entregas asociadas.
-          </Text>
-        </View>
-      )}
 
       <FooterActions
         isEditMode={isEditMode}
@@ -280,11 +307,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    justifyContent: 'space-between',
   },
   productList: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 8,
   },
   productListContent: {
     paddingBottom: 20,
@@ -298,5 +325,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.error,
     padding: 2
-  }
+  },
+  searchInfo: {
+    marginTop: 12,
+  },
+  searchInfoText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
 });
