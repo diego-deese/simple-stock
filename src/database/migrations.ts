@@ -189,6 +189,15 @@ const migrations: Migration[] = [
       );
     `,
   },
+  // Add synced flag to reports for synchronization queue
+  {
+    version: 9,
+    name: 'add_synced_flag_to_reports',
+    up: `
+      ALTER TABLE reports ADD COLUMN synced INTEGER DEFAULT 0;
+      CREATE INDEX IF NOT EXISTS idx_reports_synced ON reports(synced);
+    `,
+  },
 ];
 
 /**

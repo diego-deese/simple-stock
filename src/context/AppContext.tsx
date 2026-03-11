@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useReducer, useEffect, useState, useRef, useCallback, ReactNode } from 'react';
+import { AppState as RNAppState } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { Product, Category, Report, ReportDetail, TempCount, TempPedido, TempDesperdicio, InventoryWithProduct, BalanceMensual, MonthWithData, PedidosLoadSource, AppContextType, AppState, AppAction } from '@app-types/index';
 import { initializeDatabase } from '@database/index';
-import { productService, categoryService, inventoryService, reportService } from '@services/index';
+import { productService, categoryService, inventoryService, reportService, initNetworkBackupListener, initSyncListener, shouldBackupDue, backupNow } from '@services/index';
 
 // Estado inicial
 const initialState: AppState = {
@@ -125,11 +127,34 @@ export function AppProvider({ children }: AppProviderProps) {
     if (initStarted.current) return;
     initStarted.current = true;
 
+    let sub: any = null; // subscription returned by AppState.addEventListener
+
     (async () => {
       try {
         dispatch({ type: 'SET_LOADING', payload: true });
         await initializeDatabase();
         setDbReady(true);
+
+        // start the network backup & sync listeners once the DB is ready
+        initNetworkBackupListener();
+        initSyncListener();
+
+        // also trigger backup when app becomes active (if due)
+        sub = RNAppState.addEventListener('change', async state => {
+          if (state !== 'active') return;
+
+          // Only attempt backup when there is network connectivity
+          const net = await NetInfo.fetch();
+          if (!net.isConnected) return;
+
+          const due = await shouldBackupDue();
+          if (!due) {
+            console.log('[AppContext] foreground but backup not due');
+            return;
+          }
+
+          backupNow().catch(e => console.error('[AppContext] backup failed', e));
+        });
 
         // Cargar datos iniciales en background
         await contextValue.loadProducts();
@@ -146,6 +171,11 @@ export function AppProvider({ children }: AppProviderProps) {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     })();
+
+    // tear down AppState subscription on unmount
+    return () => {
+      sub?.remove();
+    };
   }, []);
 
   // memoized helpers to avoid changing identity on every render

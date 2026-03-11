@@ -4,11 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '@theme/colors';
 import { MenuItem } from './menu-item';
 import ScreenHeader from '@components/ScreenHeader';
+import { backupNow, reportService } from '@services/index';
 
 interface AdminPanelProps {
   onLogout: () => void;
@@ -47,6 +49,32 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
           title="Historial de Reportes"
           description="Ver y exportar reportes guardados"
           onPress={() => router.navigate('/history')}
+        />
+        <MenuItem
+          icon="💾"
+          title="Exportar copia"
+          description="Genera y sube una copia de seguridad a Drive"
+          onPress={async () => {
+            try {
+              await backupNow();
+            } catch (e) {
+              console.error('manual backup failed', e);
+            }
+          }}
+        />
+        <MenuItem
+          icon="🔄"
+          title="Reiniciar sincronización"
+          description="Marcar todos los reportes como no sincronizados"
+          onPress={async () => {
+            try {
+              await reportService.clearAllSynced();
+              Alert.alert('Sincronización', 'Todas las marcas de sincronización han sido reiniciadas');
+            } catch (e) {
+              console.error('reset sync failed', e);
+              Alert.alert('Error', 'No se pudo reiniciar la sincronización');
+            }
+          }}
         />
       </View>
     </View>

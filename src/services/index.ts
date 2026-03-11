@@ -7,3 +7,5 @@ export { reportService } from './ReportService';
 export { inventoryService } from './InventoryService';
 export { exportService } from './ExportService';
 export { adminService } from './AdminService';
+export { initNetworkBackupListener, backupNow, shouldBackupDue } from './BackupService';
+export { initSyncListener, syncData } from './SyncService';
