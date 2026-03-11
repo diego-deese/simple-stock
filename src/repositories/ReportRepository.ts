@@ -27,6 +27,15 @@ class ReportRepository extends BaseRepository<Report> {
     );
   }
 
+
+  /**
+   * Resetea la marca de sincronización en todos los reportes.
+   * Útil para pruebas/forzar backups completos.
+   */
+  async clearAllSynced(): Promise<void> {
+    await this.getDb().runAsync('UPDATE reports SET synced = 0');
+  }
+
    /**
     * Obtiene reportes de entregas.
     */
@@ -192,6 +201,7 @@ class ReportRepository extends BaseRepository<Report> {
    * @param month - Mes (1-12)
    */
   async findByTypeAndMonth(type: MovementType, year: number, month: number): Promise<Report | null> {
+    // Se utiliza en varios helpers para obtener el primer reporte de un mes
     const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
     const endDate = month === 12
       ? `${year + 1}-01-01`
@@ -201,8 +211,27 @@ class ReportRepository extends BaseRepository<Report> {
       'SELECT * FROM reports WHERE type = ? AND date >= ? AND date < ? ORDER BY date DESC LIMIT 1',
       [type, startDate, endDate]
     );
-    
     return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Obtiene reportes que aún no han sido sincronizados.
+   */
+  async findUnsynced(): Promise<Report[]> {
+    return this.rawQuery<Report>(
+      'SELECT * FROM reports WHERE synced = 0 ORDER BY date ASC',
+      []
+    );
+  }
+
+  /**
+   * Marca una lista de reportes como sincronizados.
+   */
+  async markAsSynced(ids: number[]): Promise<void> {
+    if (ids.length === 0) return;
+    const placeholders = ids.map(() => '?').join(',');
+    const sql = `UPDATE reports SET synced = 1 WHERE id IN (${placeholders})`;
+    await this.getDb().runAsync(sql, ids);
   }
 
    /**

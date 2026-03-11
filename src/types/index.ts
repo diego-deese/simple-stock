@@ -39,6 +39,7 @@ export interface Report {
   date: string; // ISO string format
   type: MovementType; // 'entregas' o 'pedidos'
   related_report_id?: number | null; // opcional: para vincular entregas a un pedido
+  synced?: boolean; // marcado cuando el reporte ha sido enviado al servidor
   created_at?: string;
 }
 

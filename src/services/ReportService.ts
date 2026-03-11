@@ -86,6 +86,27 @@ class ReportService {
   }
 
   /**
+   * Devuelve todos los reportes que aún no se han sincronizado.
+   */
+  async getUnsyncedReports(): Promise<Report[]> {
+    return reportRepository.findUnsynced();
+  }
+
+  /**
+   * Resetea la bandera `synced` en todos los reportes (para pruebas/validación).
+   */
+  async clearAllSynced(): Promise<void> {
+    await reportRepository.clearAllSynced();
+  }
+
+  /**
+   * Marca una lista de reportes como sincronizados.
+   */
+  async markReportsSynced(ids: number[]): Promise<void> {
+    await reportRepository.markAsSynced(ids);
+  }
+
+  /**
    * Guarda un nuevo reporte de entregas a partir de los conteos temporales.
    * @throws Error si no hay conteos para guardar.
    */

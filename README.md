@@ -137,6 +137,112 @@ Frijoles,30,kg
 Aceite,20,litros
 ```
 
+## 📦 Respaldo automático vía Google Apps Script
+
+La aplicación ahora puede generar una copia de seguridad del archivo de base de datos SQLite (`.db`) y enviarla a un *Webhook* construido con Google Apps Script. El script guardará los metadatos en una hoja de cálculo y el archivo `.db` en una carpeta de Drive centralizada.
+
+### Configuración del Webhook
+1. Cree un nuevo proyecto de Apps Script (https://script.google.com).
+2. Pegue el siguiente código en el editor y guarde:
+
+```javascript
+function doPost(e) {
+  try {
+    const payload = JSON.parse(e.postData.contents);
+
+    // append rows to spreadsheet
+    const ssId = 'TU_SPREADSHEET_ID';
+    const sheetName = 'Sincronizaciones';
+    const ss = SpreadsheetApp.openById(ssId);
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) sheet = ss.insertSheet(sheetName);
+    
+    // prepare headers once; check first cell value instead of row count
+    const first = sheet.getRange(1,1).getValue();
+    if (first !== 'fecha') {
+      sheet.insertRowBefore(1);
+      sheet.getRange(1,1,1,7).setValues([['fecha','deviceId','filename','reportId','tipo','relatedReport','cantidadDetalles']]);
+    }
+
+    // append metadata row only if this is a backup (filename exists)
+    if (payload.metadata.filename) {
+      sheet.appendRow([
+        payload.metadata.date,
+        payload.metadata.deviceId,
+        payload.metadata.filename,
+        '', '', '', ''
+      ]);
+    }
+
+    // if payload contains multiple rows (sync operation), append them too
+    if (payload.rows && Array.isArray(payload.rows)) {
+      payload.rows.forEach(r => {
+        sheet.appendRow([
+          payload.metadata.date,
+          payload.metadata.deviceId,
+          '',
+          r.id,
+          r.type,
+          r.related_report_id || '',
+          r.quantity || ''
+        ]);
+      });
+    }
+
+    // if we received a full-report CSV, write it to a separate sheet
+    if (payload.full_report_csv) {
+      let cons = ss.getSheetByName('Consolidado');
+      if (!cons) cons = ss.insertSheet('Consolidado');
+      // clear previous contents and rewrite whole CSV; use parseCsv to split columns
+      cons.clear();
+      const lines = payload.full_report_csv.split('\n');
+      lines.forEach(line => {
+        if (line.trim() === '') return;
+        const parsed = Utilities.parseCsv(line)[0] || [];
+        cons.appendRow(parsed);
+      });
+    }
+
+    // save database file if present (filename should include .db)
+    if (payload.file_b64) {
+      const folderId = 'TU_FOLDER_ID';
+      const folder = DriveApp.getFolderById(folderId);
+      const blob = Utilities.newBlob(Utilities.base64Decode(payload.file_b64), 'application/octet-stream', payload.metadata.filename);
+      folder.createFile(blob);
+    }
+
+    // success response
+    return ContentService.createTextOutput(JSON.stringify({ success: true }))
+                         .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    Logger.log('doPost error: ' + err);
+    return ContentService.createTextOutput(JSON.stringify({ error: err.message }))
+                         .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+```
+
+3. Despliegue el proyecto como "Aplicación web".
+4. Anote la URL del Web App; ese será el endpoint donde la app enviará los backups.
+
+### Variables de entorno
+Añada las siguientes variables a un archivo `.env` o a `expo.extra`:
+
+```env
+BACKUP_ENDPOINT=https://script.google.com/macros/s/ABC123/exec
+# Opcionalmente, si usa la sincronización automática:
+SYNC_ENDPOINT=https://script.google.com/macros/s/DEF456/exec
+```
+
+> 👀 Asegúrese de que el Web App tenga los permisos adecuados (cualquiera, incluso anónimo, o proteja con algún token propio).
+
+### Uso
+- La copia se envía automáticamente cuando la app detecta conexión de red.
+- El botón “Exportar copia” en el **Panel de Admin** también dispara el envío.
+
+> ⚠️ **Seguridad**: la URL del Webhook puede ser sensible. Guardarla fuera del control de versiones y, si desea, añada un token privado en el payload.
+
+
 ## 🎨 Guía de Accesibilidad
 
 La aplicación sigue las mejores prácticas de accesibilidad:

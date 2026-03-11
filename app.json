@@ -5,12 +5,12 @@
     "version": "1.0.0",
     "scheme": "simplestock",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/zoofari.jpg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "description": "App de gestión de inventario offline para centros de conservación",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/zoofari.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#007AFF"
     },
@@ -20,7 +20,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/zoofari.jpg",
         "backgroundColor": "#007AFF"
       },
       "edgeToEdgeEnabled": true,
@@ -33,7 +33,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/zoofari.jpg",
       "bundler": "metro"
     },
     "plugins": [
@@ -46,6 +46,8 @@
       ]
     ],
     "extra": {
+      "SYNC_ENDPOINT": "https://script.google.com/macros/s/AKfycbwta_g8r6KKDBwFZNXhlxYyd1Ps8MSFBOxXUgWuNqKR20P7eWmc7G2VEbePiUJdJJA/exec",
+      "BACKUP_ENDPOINT": "https://script.google.com/macros/s/AKfycbwta_g8r6KKDBwFZNXhlxYyd1Ps8MSFBOxXUgWuNqKR20P7eWmc7G2VEbePiUJdJJA/exec",
       "eas": {
         "projectId": "3a135261-d396-4ad9-abf7-6f1511336ee6"
       }
