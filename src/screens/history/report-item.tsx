@@ -19,6 +19,7 @@ interface ReportItemProps {
   exporting: boolean;
   onPress: (report: Report) => void;
   onExport: (report: Report) => void;
+  onExportByPedido?: (report: Report) => void;
   formatDate: (date: string) => string;
 }
 
@@ -32,7 +33,7 @@ const getTypeConfig = (type: MovementType) => {
   return { label: 'Pedidos de Cocina', emoji: '📋', color: PEDIDOS_COLOR };
 };
 
-export function ReportItem({ item, exporting, onPress, onExport, formatDate }: ReportItemProps) {
+export function ReportItem({ item, exporting, onPress, onExport, onExportByPedido, formatDate }: ReportItemProps) {
   const typeConfig = getTypeConfig(item.type || 'entregas');
   
   return (
@@ -52,6 +53,18 @@ export function ReportItem({ item, exporting, onPress, onExport, formatDate }: R
       </View>
       
       <View style={styles.reportActions}>
+        {onExportByPedido && (
+          <TouchableOpacity
+            style={[styles.exportIconButton, styles.exportByPedidoButton]}
+            onPress={(e) => {
+              e.stopPropagation();
+              onExportByPedido(item);
+            }}
+            disabled={exporting}
+          >
+            <Text style={styles.exportIcon}>📊</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.exportIconButton}
           onPress={(e) => {
@@ -127,7 +140,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.backgroundDark,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
+    marginLeft: 8,
+  },
+  exportByPedidoButton: {
+    backgroundColor: colors.secondary + '20',
   },
   exportIcon: {
     fontSize: 20,

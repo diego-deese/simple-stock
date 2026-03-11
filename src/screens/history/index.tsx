@@ -124,6 +124,42 @@ export function History() {
     }
   };
 
+  const handleExportFullReport = async () => {
+    try {
+      setExporting(true);
+      await exportService.exportAndShareFullReport();
+    } catch (error) {
+      console.error('Error al exportar reporte general:', error);
+      Alert.alert('Error', 'No se pudo exportar el reporte general');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPedidosComparison = async () => {
+    try {
+      setExporting(true);
+      await exportService.exportAndShareAllPedidosComparison();
+    } catch (error) {
+      console.error('Error al exportar comparación:', error);
+      Alert.alert('Error', 'No se pudo exportar la comparación de pedidos');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportByPedido = async (report: Report) => {
+    try {
+      setExporting(true);
+      await exportService.exportAndShareReportByPedido(report.id);
+    } catch (error) {
+      console.error('Error al exportar pedido:', error);
+      Alert.alert('Error', 'No se pudo exportar el reporte del pedido');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading || authLoading) {
     return <LoadingScreen message="Cargando reportes..." />;
   }
@@ -272,6 +308,7 @@ export function History() {
             exporting={exporting}
             onPress={handleReportPress}
             onExport={handleExportReport}
+            onExportByPedido={item.type === 'pedidos' ? handleExportByPedido : undefined}
             formatDate={formatDate}
           />
         )}
@@ -291,6 +328,33 @@ export function History() {
           />
         }
       />
+
+      {/* Botones de exportación general */}
+      {reports.length > 0 && (
+        <View style={styles.exportBar}>
+          <TouchableOpacity
+            style={[styles.exportButton, styles.exportButtonFull]}
+            onPress={handleExportFullReport}
+            disabled={exporting}
+          >
+            <Text style={styles.exportButtonText}>
+              📊 Exportar Todo
+            </Text>
+          </TouchableOpacity>
+
+          {counts.pedidos > 0 && (
+            <TouchableOpacity
+              style={[styles.exportButton, styles.exportButtonPedidos]}
+              onPress={handleExportPedidosComparison}
+              disabled={exporting}
+            >
+              <Text style={styles.exportButtonText}>
+                📋 Pedidos vs Entregas
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       <ReportDetailsModal
         visible={showDetailsModal}
@@ -372,5 +436,32 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     marginTop: 60,
+  },
+  exportBar: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  exportButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exportButtonFull: {
+    backgroundColor: colors.primaryDark,
+  },
+  exportButtonPedidos: {
+    backgroundColor: colors.secondary,
+  },
+  exportButtonText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

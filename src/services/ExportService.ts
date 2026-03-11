@@ -277,6 +277,263 @@ class ExportService {
     await this.shareFile(filePath);
   }
 
+  // =====================================================
+  // REPORTES GENERALES (para gráficas)
+  // =====================================================
+
+  private readonly monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  ];
+
+  private escapeCSV(value: string): string {
+    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+  }
+
+  /**
+   * Genera un CSV plano con TODOS los movimientos (pedidos, entregas, desperdicio).
+   * Cada fila = un movimiento de un producto. Ideal para pivot tables y gráficas.
+   *
+   * Columnas: Fecha, Mes, Año, Tipo, ID_Reporte, Pedido_Vinculado,
+   *           Producto, Unidad, Categoría, Cantidad
+   */
+  async generateFullReportCSV(): Promise<string> {
+    const sql = `
+      SELECT
+        r.id   AS report_id,
+        r.date,
+        r.type,
+        r.related_report_id,
+        rd.product_name,
+        rd.quantity,
+        p.unit,
+        c.name AS category_name
+      FROM report_details rd
+      INNER JOIN reports r  ON rd.report_id = r.id
+      LEFT  JOIN products p ON rd.product_name = p.name
+      LEFT  JOIN categories c ON p.category_id = c.id
+      ORDER BY r.date ASC, r.type, rd.product_name
+    `;
+
+    const rows = await reportRepository.rawQuery<{
+      report_id: number;
+      date: string;
+      type: MovementType;
+      related_report_id: number | null;
+      product_name: string;
+      quantity: number;
+      unit: string | null;
+      category_name: string | null;
+    }>(sql, []);
+
+    // BOM para que Excel reconozca UTF-8
+    let csv = '\uFEFF';
+    csv += 'Fecha,Mes,Año,Tipo,ID_Reporte,Pedido_Vinculado,Producto,Unidad,Categoría,Cantidad\n';
+
+    for (const row of rows) {
+      const d = new Date(row.date);
+      const fecha = d.toLocaleDateString('es-ES');
+      const mes = this.monthNames[d.getMonth()];
+      const año = d.getFullYear();
+      const tipo = row.type === 'entregas' ? 'Entregas'
+        : row.type === 'pedidos' ? 'Pedidos' : 'Desperdicio';
+
+      csv += `${fecha},${mes},${año},${tipo},${row.report_id},`
+        + `${row.related_report_id ?? ''},`
+        + `${this.escapeCSV(row.product_name)},`
+        + `${row.unit || 'unidad'},`
+        + `${this.escapeCSV(row.category_name || 'Sin categoría')},`
+        + `${row.quantity}\n`;
+    }
+
+    return csv;
+  }
+
+  /**
+   * Genera un CSV comparativo de un pedido específico vs sus entregas
+   * vinculadas y desperdicio del mismo mes.
+   */
+  async generateReportByPedidoCSV(pedidoId: number): Promise<string> {
+    const pedidoData = await reportRepository.findByIdWithDetails(pedidoId);
+    if (!pedidoData || pedidoData.report.type !== 'pedidos') {
+      throw new Error('Pedido no encontrado');
+    }
+
+    const pedidoDate = new Date(pedidoData.report.date);
+    const monthKey = `${pedidoDate.getFullYear()}-${(pedidoDate.getMonth() + 1).toString().padStart(2, '0')}`;
+
+    // Entregas vinculadas a este pedido
+    const entregasSql = `
+      SELECT rd.product_name, SUM(rd.quantity) AS qty
+      FROM reports r
+      INNER JOIN report_details rd ON rd.report_id = r.id
+      WHERE r.type = 'entregas' AND r.related_report_id = ?
+      GROUP BY rd.product_name
+    `;
+    const entregasRows = await reportRepository.rawQuery<{
+      product_name: string; qty: number;
+    }>(entregasSql, [pedidoId]);
+
+    // Desperdicio del mismo mes
+    const desperdicioSql = `
+      SELECT rd.product_name, SUM(rd.quantity) AS qty
+      FROM reports r
+      INNER JOIN report_details rd ON rd.report_id = r.id
+      WHERE r.type = 'desperdicio'
+        AND strftime('%Y-%m', r.date) = ?
+      GROUP BY rd.product_name
+    `;
+    const desperdicioRows = await reportRepository.rawQuery<{
+      product_name: string; qty: number;
+    }>(desperdicioSql, [monthKey]);
+
+    // Mapas de búsqueda rápida
+    const entregasMap = new Map(entregasRows.map(e => [e.product_name, e.qty]));
+    const desperdicioMap = new Map(desperdicioRows.map(d => [d.product_name, d.qty]));
+
+    const fechaPedido = pedidoDate.toLocaleDateString('es-ES');
+
+    let csv = '\uFEFF';
+    csv += `Reporte por Pedido #${pedidoId}\n`;
+    csv += `Fecha del Pedido,${fechaPedido}\n`;
+    csv += `Mes,${this.monthNames[pedidoDate.getMonth()]} ${pedidoDate.getFullYear()}\n\n`;
+    csv += 'Producto,Unidad,Categoría,Qty_Pedida,Qty_Entregada,Qty_Desperdicio,Diferencia,Estado\n';
+
+    let totPedido = 0, totEntrega = 0, totDesp = 0;
+
+    for (const det of pedidoData.details) {
+      const product = await productRepository.findByName(det.product_name);
+      const unit = product?.unit || 'unidad';
+      const catName = product?.category_name || 'Sin categoría';
+
+      const qtyPedida = det.quantity;
+      const qtyEntregada = entregasMap.get(det.product_name) || 0;
+      const qtyDesp = desperdicioMap.get(det.product_name) || 0;
+      const diferencia = qtyEntregada - qtyPedida - qtyDesp;
+      const estado = diferencia >= 0 ? 'Completo' : 'Faltante';
+
+      csv += `${this.escapeCSV(det.product_name)},${unit},${this.escapeCSV(catName)},`
+        + `${qtyPedida},${qtyEntregada},${qtyDesp},${diferencia},${estado}\n`;
+
+      totPedido += qtyPedida;
+      totEntrega += qtyEntregada;
+      totDesp += qtyDesp;
+    }
+
+    csv += `\nTOTALES,,,${totPedido},${totEntrega},${totDesp},${totEntrega - totPedido - totDesp},\n`;
+    return csv;
+  }
+
+  /**
+   * Genera un CSV con TODOS los pedidos comparados contra sus entregas
+   * vinculadas y desperdicio del mismo mes.
+   * Cada fila = un producto dentro de un pedido. Ideal para gráficas comparativas.
+   */
+  async generateAllPedidosComparisonCSV(): Promise<string> {
+    const sql = `
+      SELECT
+        pedido.id   AS pedido_id,
+        pedido.date AS pedido_date,
+        pd.product_name,
+        p.unit,
+        c.name AS category_name,
+        pd.quantity AS qty_pedida,
+        COALESCE(ed.qty_entregada, 0) AS qty_entregada,
+        COALESCE(desp.qty_desperdicio, 0) AS qty_desperdicio
+      FROM reports pedido
+      INNER JOIN report_details pd ON pd.report_id = pedido.id
+      LEFT  JOIN products p ON pd.product_name = p.name
+      LEFT  JOIN categories c ON p.category_id = c.id
+      LEFT  JOIN (
+        SELECT r.related_report_id, rd.product_name,
+               SUM(rd.quantity) AS qty_entregada
+        FROM reports r
+        INNER JOIN report_details rd ON rd.report_id = r.id
+        WHERE r.type = 'entregas' AND r.related_report_id IS NOT NULL
+        GROUP BY r.related_report_id, rd.product_name
+      ) ed ON ed.related_report_id = pedido.id
+          AND ed.product_name = pd.product_name
+      LEFT  JOIN (
+        SELECT strftime('%Y-%m', r.date) AS month_key,
+               rd.product_name,
+               SUM(rd.quantity) AS qty_desperdicio
+        FROM reports r
+        INNER JOIN report_details rd ON rd.report_id = r.id
+        WHERE r.type = 'desperdicio'
+        GROUP BY month_key, rd.product_name
+      ) desp ON desp.month_key = strftime('%Y-%m', pedido.date)
+            AND desp.product_name = pd.product_name
+      WHERE pedido.type = 'pedidos'
+      ORDER BY pedido.date DESC, pd.product_name
+    `;
+
+    const rows = await reportRepository.rawQuery<{
+      pedido_id: number;
+      pedido_date: string;
+      product_name: string;
+      unit: string | null;
+      category_name: string | null;
+      qty_pedida: number;
+      qty_entregada: number;
+      qty_desperdicio: number;
+    }>(sql, []);
+
+    let csv = '\uFEFF';
+    csv += 'ID_Pedido,Fecha_Pedido,Mes,Año,Producto,Unidad,Categoría,'
+      + 'Qty_Pedida,Qty_Entregada,Qty_Desperdicio,Diferencia,Estado\n';
+
+    for (const row of rows) {
+      const d = new Date(row.pedido_date);
+      const fecha = d.toLocaleDateString('es-ES');
+      const mes = this.monthNames[d.getMonth()];
+      const año = d.getFullYear();
+      const diferencia = row.qty_entregada - row.qty_pedida - row.qty_desperdicio;
+      const estado = diferencia >= 0 ? 'Completo' : 'Faltante';
+
+      csv += `${row.pedido_id},${fecha},${mes},${año},`
+        + `${this.escapeCSV(row.product_name)},`
+        + `${row.unit || 'unidad'},`
+        + `${this.escapeCSV(row.category_name || 'Sin categoría')},`
+        + `${row.qty_pedida},${row.qty_entregada},${row.qty_desperdicio},`
+        + `${diferencia},${estado}\n`;
+    }
+
+    return csv;
+  }
+
+  /**
+   * Exporta y comparte el reporte general completo.
+   */
+  async exportAndShareFullReport(): Promise<void> {
+    const csv = await this.generateFullReportCSV();
+    const fileName = `reporte_general_${Date.now()}.csv`;
+    const filePath = await this.saveCSVToFile(csv, fileName);
+    await this.shareFile(filePath);
+  }
+
+  /**
+   * Exporta y comparte el reporte de un pedido específico vs entregas/desperdicio.
+   */
+  async exportAndShareReportByPedido(pedidoId: number): Promise<void> {
+    const csv = await this.generateReportByPedidoCSV(pedidoId);
+    const fileName = `reporte_pedido_${pedidoId}_${Date.now()}.csv`;
+    const filePath = await this.saveCSVToFile(csv, fileName);
+    await this.shareFile(filePath);
+  }
+
+  /**
+   * Exporta y comparte la comparación de todos los pedidos vs entregas.
+   */
+  async exportAndShareAllPedidosComparison(): Promise<void> {
+    const csv = await this.generateAllPedidosComparisonCSV();
+    const fileName = `comparacion_pedidos_${Date.now()}.csv`;
+    const filePath = await this.saveCSVToFile(csv, fileName);
+    await this.shareFile(filePath);
+  }
+
   /**
    * Guarda un archivo CSV en el directorio de documentos.
    * Usa la nueva API de expo-file-system (Paths, File, Directory).
