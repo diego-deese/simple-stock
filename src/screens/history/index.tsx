@@ -16,6 +16,7 @@ import { useAuth } from '@context/AuthContext';
 import { reportService, exportService } from '@services/index';
 import { Report, ReportDetail, MovementType } from '@app-types/index';
 import { colors } from '@theme/colors';
+import { formatLocalFromSqlite, parseSqliteUtc } from '@helpers/date';
 import { ReportItem } from './report-item';
 import { ReportDetailsModal } from './report-details-modal';
 import LoadingScreen from '@components/LoadingScreen';
@@ -32,7 +33,7 @@ type FilterType = 'all' | MovementType;
 export function History() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { reports, loading } = useApp();
-  
+
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [reportDetails, setReportDetails] = useState<ReportDetail[]>([]);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -65,8 +66,7 @@ export function History() {
   }, [isAuthenticated, authLoading]);
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
+    return formatLocalFromSqlite(dateString, 'es-ES', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -79,7 +79,7 @@ export function History() {
     try {
       setLoadingDetails(true);
       setSelectedReport(report);
-      
+
       const details = await reportService.getReportDetails(report.id);
       setReportDetails(details);
       setShowDetailsModal(true);
@@ -96,14 +96,14 @@ export function History() {
       await exportService.exportAndShareReport(report.id);
     } catch (error) {
       console.error('Error al exportar:', error);
-      
+
       try {
         const csvContent = await exportService.generateReportCSV(report.id);
-        const date = new Date(report.date);
+        const date = parseSqliteUtc(report.date);
         const fileName = `reporte_${date.getFullYear()}_${(date.getMonth() + 1)
           .toString().padStart(2, '0')}_${date.getDate()
-          .toString().padStart(2, '0')}.csv`;
-        
+            .toString().padStart(2, '0')}.csv`;
+
         Alert.alert(
           'Contenido del Reporte',
           `Archivo: ${fileName}\n\n${csvContent.substring(0, 200)}${csvContent.length > 200 ? '...' : ''}`,
@@ -316,7 +316,7 @@ export function History() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <EmptyState
-            message={activeFilter === 'all' 
+            message={activeFilter === 'all'
               ? "No hay reportes guardados"
               : `No hay ${activeFilter === 'entregas' ? 'entregas' : 'pedidos'} registrados`
             }
