@@ -4,6 +4,7 @@ import { reportRepository } from '@repositories/ReportRepository';
 import { productRepository } from '@repositories/ProductRepository';
 import { inventoryRepository } from '@repositories/InventoryRepository';
 import { MovementType } from '@app-types/index';
+import { formatLocalFromSqlite, parseSqliteUtc } from '@helpers/date';
 
 /**
  * Servicio para exportación de datos.
@@ -26,7 +27,7 @@ class ExportService {
     }
 
     const { report, details } = reportData;
-    const reportDate = new Date(report.date).toLocaleDateString('es-ES', {
+    const reportDate = formatLocalFromSqlite(report.date, 'es-ES', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -74,7 +75,7 @@ class ExportService {
       if (!reportData) continue;
 
       const { report, details } = reportData;
-      const reportDate = new Date(report.date).toLocaleDateString('es-ES');
+      const reportDate = formatLocalFromSqlite(report.date, 'es-ES');
       const typeLabel = report.type === 'entregas' ? 'ENTREGAS' : report.type === 'pedidos' ? 'PEDIDOS' : 'DESPERDICIO';
 
       csv += `--- ${typeLabel} del ${reportDate} (ID: ${report.id}) ---\n`;
@@ -121,7 +122,7 @@ class ExportService {
     let totalPedidos = 0;
 
     for (const record of history) {
-      const date = new Date(record.date).toLocaleDateString('es-ES');
+      const date = formatLocalFromSqlite(record.date, 'es-ES');
       const typeLabel = record.type === 'entregas' ? 'Entregas' : record.type === 'pedidos' ? 'Pedidos' : 'Desperdicio';
       csv += `${date},${typeLabel},${record.quantity}\n`;
       
@@ -334,8 +335,8 @@ class ExportService {
     csv += 'Fecha,Mes,Año,Tipo,ID_Reporte,Pedido_Vinculado,Producto,Unidad,Categoría,Cantidad\n';
 
     for (const row of rows) {
-      const d = new Date(row.date);
-      const fecha = d.toLocaleDateString('es-ES');
+      const fecha = formatLocalFromSqlite(row.date, 'es-ES');
+      const d = parseSqliteUtc(row.date);
       const mes = this.monthNames[d.getMonth()];
       const año = d.getFullYear();
       const tipo = row.type === 'entregas' ? 'Entregas'
@@ -362,7 +363,7 @@ class ExportService {
       throw new Error('Pedido no encontrado');
     }
 
-    const pedidoDate = new Date(pedidoData.report.date);
+    const pedidoDate = parseSqliteUtc(pedidoData.report.date);
     const monthKey = `${pedidoDate.getFullYear()}-${(pedidoDate.getMonth() + 1).toString().padStart(2, '0')}`;
 
     // Entregas vinculadas a este pedido
@@ -486,8 +487,8 @@ class ExportService {
       + 'Qty_Pedida,Qty_Entregada,Qty_Desperdicio,Diferencia,Estado\n';
 
     for (const row of rows) {
-      const d = new Date(row.pedido_date);
-      const fecha = d.toLocaleDateString('es-ES');
+      const fecha = formatLocalFromSqlite(row.pedido_date, 'es-ES');
+      const d = parseSqliteUtc(row.pedido_date);
       const mes = this.monthNames[d.getMonth()];
       const año = d.getFullYear();
       const diferencia = row.qty_entregada - row.qty_pedida - row.qty_desperdicio;

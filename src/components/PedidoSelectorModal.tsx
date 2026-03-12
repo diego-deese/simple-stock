@@ -4,6 +4,7 @@ import ModalWrapper from './ModalWrapper';
 import { reportService } from '@services/index';
 import { Report } from '@app-types/index';
 import { colors } from '@theme/colors';
+import { formatLocalFromSqlite } from '@helpers/date';
 import AccessibleButton from './AccessibleButton';
 
 interface PedidoSelectorModalProps {
@@ -70,7 +71,7 @@ export default function PedidoSelectorModal({ visible, onClose, onSelect, availa
               }}
               disabled={disabled && !allowSelectDisabled}
             >
-              <Text style={[styles.itemDate, disabled && styles.disabledText]}>{new Date(item.date).toLocaleString()}</Text>
+              <Text style={[styles.itemDate, disabled && styles.disabledText]}>{formatLocalFromSqlite(item.date)}</Text>
               <Text style={[styles.itemType, disabled && styles.disabledText]}>Pedido #{item.id}</Text>
             </TouchableOpacity>
           );
