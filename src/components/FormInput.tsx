@@ -59,10 +59,10 @@ const FormInput = forwardRef<TextInput, FormInputProps>(({
             onPress={() => setShowPassword(!showPassword)}
             accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
           >
-            <MaterialIcons 
-              name={showPassword ? 'visibility-off' : 'visibility'} 
-              size={24} 
-              color={colors.textSecondary} 
+            <MaterialIcons
+              name={showPassword ? 'visibility-off' : 'visibility'}
+              size={24}
+              color={colors.textSecondary}
             />
           </TouchableOpacity>
         )}
@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     borderWidth: 1,
     borderColor: colors.border,
+    color: colors.textPrimary,
   },
   inputWithIcon: {
     paddingRight: 50,

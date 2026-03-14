@@ -199,31 +199,33 @@ export function DesperdicioScreen() {
         customTitle={isSearching ? <SearchBar value={searchTerm} onChangeText={setSearchTerm} placeholder="Buscar producto..." /> : undefined}
       />
 
-      {/* show term indicator below header */}
-      {searchTerm.trim().length > 0 && (
-        <View style={styles.searchInfo}>
-          <Text style={styles.searchInfoText}>Buscando: {searchTerm}</Text>
-        </View>
-      )}
+      <View style={styles.content}>
+        {/* show term indicator below header */}
+        {searchTerm.trim().length > 0 && (
+          <View style={styles.searchInfo}>
+            <Text style={styles.searchInfoText}>Buscando: {searchTerm}</Text>
+          </View>
+        )}
 
-      {hasProducts && filteredSections.length > 0 ? (
-        <SectionList
-          sections={filteredSections}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderProductItem}
-          renderSectionHeader={renderSectionHeader}
-          style={styles.productList}
-          contentContainerStyle={styles.productListContent}
-          extraData={{ isEditMode, quantityMap, receivedMap }}
-          showsVerticalScrollIndicator={false}
-        />
-      ) : (
-        <EmptyState
-          message={searchTerm.trim()
-            ? 'No se encontraron productos con ese nombre.'
-            : 'No se encontraron productos. Agrega productos desde el catálogo.'}
-        />
-      )}
+        {hasProducts && filteredSections.length > 0 ? (
+          <SectionList
+            sections={filteredSections}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderProductItem}
+            renderSectionHeader={renderSectionHeader}
+            style={styles.productList}
+            contentContainerStyle={styles.productListContent}
+            extraData={{ isEditMode, quantityMap, receivedMap }}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <EmptyState
+            message={searchTerm.trim()
+              ? 'No se encontraron productos con ese nombre.'
+              : 'No se encontraron productos. Agrega productos desde el catálogo.'}
+          />
+        )}
+      </View>
 
       <FooterActions
         isEditMode={isEditMode}
@@ -250,7 +252,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    justifyContent: 'space-between',
+  },
+  content: {
+    flex: 1,
   },
   productList: {
     flex: 1,
@@ -267,6 +271,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     fontStyle: 'italic',
+    paddingHorizontal: 16,
   },
 });
 
