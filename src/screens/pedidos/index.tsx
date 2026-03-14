@@ -168,11 +168,13 @@ export function PedidosScreen({ searchTerm = '' }: PedidosScreenProps) {
         isEditMode={isEditMode}
         onDecrement={() => {
           const current = quantityMap.get(item.name) || 0;
-          void updateTempPedido(item.name, Math.max(0, current - 1));
+          const next = Math.max(0, Math.round((current - 1) * 10) / 10);
+          void updateTempPedido(item.name, next);
         }}
         onIncrement={() => {
           const current = quantityMap.get(item.name) || 0;
-          void updateTempPedido(item.name, current + 1);
+          const next = Math.round((current + 1) * 10) / 10;
+          void updateTempPedido(item.name, next);
         }}
         onQuantityChange={(value: number) => { void updateTempPedido(item.name, value); }}
         showStock={false}

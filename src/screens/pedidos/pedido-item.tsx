@@ -22,13 +22,13 @@ export interface PedidoItemProps {
 const PEDIDOS_COLOR = colors.warning; // usa color del tema
 
 // Usar memo para evitar re-renders innecesarios cuando las props no cambian
-export const PedidoItem = memo(function PedidoItem({ 
-  item, 
+export const PedidoItem = memo(function PedidoItem({
+  item,
   quantity,
   isEditMode,
-  onDecrement, 
-  onIncrement, 
-  onQuantityChange 
+  onDecrement,
+  onIncrement,
+  onQuantityChange
 }: PedidoItemProps) {
   const [inputText, setInputText] = useState(String(quantity));
 
@@ -36,15 +36,31 @@ export const PedidoItem = memo(function PedidoItem({
     setInputText(String(quantity));
   }, [quantity]);
 
+  const normalizeDecimalInput = (text: string) => {
+    // Allow digits and at most one decimal point; permit trailing dot while editing.
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    if (cleaned === '.') return '0.';
+
+    const firstDotIndex = cleaned.indexOf('.');
+    if (firstDotIndex === -1) return cleaned;
+
+    const integerPart = cleaned.slice(0, firstDotIndex) || '0';
+    const decimalPart = cleaned.slice(firstDotIndex + 1).slice(0, 1);
+
+    return decimalPart.length > 0 ? `${integerPart}.${decimalPart}` : `${integerPart}.`;
+  };
+
+  const roundOneDecimal = (value: number) => Math.round(value * 10) / 10;
+
   const handleChangeText = (text: string) => {
-    const clean = text.replace(/[^0-9]/g, '');
-    setInputText(clean);
+    setInputText(normalizeDecimalInput(text));
   };
 
   const commitValue = () => {
-    const parsed = parseInt(inputText, 10);
-    const newValue = isNaN(parsed) ? 0 : Math.max(0, parsed);
-    setInputText(String(newValue));
+    const parsed = parseFloat(inputText);
+    const newValue = isNaN(parsed) ? 0 : Math.max(0, roundOneDecimal(parsed));
+    const displayValue = Number.isInteger(newValue) ? String(newValue) : newValue.toFixed(1);
+    setInputText(displayValue);
     onQuantityChange(newValue);
   };
 
@@ -58,7 +74,7 @@ export const PedidoItem = memo(function PedidoItem({
       <View style={styles.quantityContainer}>
         <TouchableOpacity
           style={[
-            styles.quantityButton, 
+            styles.quantityButton,
             styles.decreaseButton,
             !isEditMode && styles.buttonDisabled
           ]}
@@ -70,34 +86,25 @@ export const PedidoItem = memo(function PedidoItem({
 
         <TextInput
           style={[
-            styles.quantityInput, 
+            styles.quantityInput,
             !isEditMode && styles.inputDisabled
           ]}
           value={inputText}
           onChangeText={handleChangeText}
           onEndEditing={commitValue}
           onBlur={commitValue}
-          keyboardType="numeric"
-          returnKeyType="done"
-          selectTextOnFocus
-          maxLength={6}
-          textAlign="center"
-          editable={isEditMode}
-        />
-
-        <TouchableOpacity
-          style={[
-            styles.quantityButton, 
-            styles.increaseButton,
-            !isEditMode && styles.buttonDisabled
+          keyboardType="decimal-pad"
+          styles.quantityButton,
+        styles.increaseButton,
+        !isEditMode && styles.buttonDisabled
           ]}
-          onPress={onIncrement}
-          disabled={!isEditMode}
+        onPress={onIncrement}
+        disabled={!isEditMode}
         >
-          <Text style={[styles.buttonText, !isEditMode && styles.buttonTextDisabled]}>+</Text>
-        </TouchableOpacity>
-      </View>
+        <Text style={[styles.buttonText, !isEditMode && styles.buttonTextDisabled]}>+</Text>
+      </TouchableOpacity>
     </View>
+    </View >
   );
 });
 

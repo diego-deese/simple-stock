@@ -34,15 +34,31 @@ export const ProductItemBase = memo(function ProductItemBase(props: ProductItemB
     setInputText(String(quantity));
   }, [quantity]);
 
+  const normalizeDecimalInput = (text: string) => {
+    // Allow digits and at most one decimal point; permit trailing dot while editing.
+    const cleaned = text.replace(/[^0-9.]/g, '');
+    if (cleaned === '.') return '0.';
+
+    const firstDotIndex = cleaned.indexOf('.');
+    if (firstDotIndex === -1) return cleaned;
+
+    const integerPart = cleaned.slice(0, firstDotIndex) || '0';
+    const decimalPart = cleaned.slice(firstDotIndex + 1).slice(0, 1);
+
+    return decimalPart.length > 0 ? `${integerPart}.${decimalPart}` : `${integerPart}.`;
+  };
+
+  const roundOneDecimal = (value: number) => Math.round(value * 10) / 10;
+
   const handleChangeText = (text: string) => {
-    const clean = text.replace(/[^0-9]/g, '');
-    setInputText(clean);
+    setInputText(normalizeDecimalInput(text));
   };
 
   const commitValue = () => {
-    const parsed = parseInt(inputText, 10);
-    const newValue = isNaN(parsed) ? 0 : Math.max(0, parsed);
-    setInputText(String(newValue));
+    const parsed = parseFloat(inputText);
+    const newValue = isNaN(parsed) ? 0 : Math.max(0, roundOneDecimal(parsed));
+    const displayValue = Number.isInteger(newValue) ? String(newValue) : newValue.toFixed(1);
+    setInputText(displayValue);
     onQuantityChange(newValue);
   };
 
@@ -74,7 +90,7 @@ export const ProductItemBase = memo(function ProductItemBase(props: ProductItemB
             onChangeText={handleChangeText}
             onEndEditing={commitValue}
             onBlur={commitValue}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
             returnKeyType="done"
             selectTextOnFocus
             maxLength={6}
@@ -97,20 +113,20 @@ export const ProductItemBase = memo(function ProductItemBase(props: ProductItemB
         <>
           <View style={styles.divider} />
           <View style={styles.comparisonContainer}>
-          <View style={styles.compareBlock}>
-            <Text style={styles.compareLabel}>Pedido</Text>
-            <Text style={[styles.compareValue, { color: '#FF9800' }]}>{pedidoQty}</Text>
-          </View>
+            <View style={styles.compareBlock}>
+              <Text style={styles.compareLabel}>Pedido</Text>
+              <Text style={[styles.compareValue, { color: '#FF9800' }]}>{pedidoQty}</Text>
+            </View>
 
-          <View style={styles.compareBlock}>
-            <Text style={styles.compareLabel}>Entrega</Text>
-            <Text style={[styles.compareValue, { color: variantColor ?? colors.success }]}>{quantity}</Text>
-          </View>
+            <View style={styles.compareBlock}>
+              <Text style={styles.compareLabel}>Entrega</Text>
+              <Text style={[styles.compareValue, { color: variantColor ?? colors.success }]}>{quantity}</Text>
+            </View>
 
-          <View style={styles.compareBlock}>
-            <Text style={styles.compareLabel}>Diferencia</Text>
-            <Text style={[styles.compareValue, diferencia < 0 ? styles.negative : diferencia > 0 ? styles.positive : styles.ok]}>{diferencia}</Text>
-          </View>
+            <View style={styles.compareBlock}>
+              <Text style={styles.compareLabel}>Diferencia</Text>
+              <Text style={[styles.compareValue, diferencia < 0 ? styles.negative : diferencia > 0 ? styles.positive : styles.ok]}>{diferencia}</Text>
+            </View>
           </View>
         </>
       ) : ((showStock !== false) && (
