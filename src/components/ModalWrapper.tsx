@@ -8,6 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { colors } from '@theme/colors';
 
@@ -39,15 +41,15 @@ export default function ModalWrapper({
   avoidKeyboard = false,
 }: ModalWrapperProps) {
   const content = (
-    <View 
+    <View
       style={[
-        styles.content, 
+        styles.content,
         { width, maxHeight } as ViewStyle,
         contentStyle,
       ]}
     >
       {avoidKeyboard ? (
-        <ScrollView 
+        <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
@@ -60,19 +62,23 @@ export default function ModalWrapper({
     </View>
   );
 
+  const resolvedAnimationType = avoidKeyboard ? 'fade' : animationType;
+
   return (
     <Modal
       visible={visible}
       transparent={true}
-      animationType={animationType}
+      animationType={resolvedAnimationType}
     >
       {avoidKeyboard ? (
-        <KeyboardAvoidingView 
-          style={styles.overlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          {content}
-        </KeyboardAvoidingView>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView
+            style={styles.overlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          >
+            {content}
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       ) : (
         <View style={styles.overlay}>
           {content}
