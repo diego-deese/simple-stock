@@ -122,11 +122,13 @@ export default function EntregasScreen({ searchTerm = '' }: EntregasScreenProps)
         isEditMode={isEditMode}
         onDecrement={() => {
           const current = quantityMap.get(item.name) || 0;
-          void updateTempCount(item.name, Math.max(0, current - 1));
+          const next = Math.max(0, Math.round((current - 1) * 10) / 10);
+          void updateTempCount(item.name, next);
         }}
         onIncrement={() => {
           const current = quantityMap.get(item.name) || 0;
-          void updateTempCount(item.name, current + 1);
+          const next = Math.round((current + 1) * 10) / 10;
+          void updateTempCount(item.name, next);
         }}
         onQuantityChange={(value: number) => { void updateTempCount(item.name, value); }}
         pedidoQuantity={selectedPedidoDetails.get(item.name) || 0}

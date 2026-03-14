@@ -149,13 +149,17 @@ export function DesperdicioScreen() {
         quantity={quantity}
         receivedQuantity={received}
         isEditMode={isEditMode}
-        onDecrement={() => updateTempDesperdicio(item.name, Math.max(0, quantity - 1))}
+        onDecrement={() => {
+          const next = Math.max(0, Math.round((quantity - 1) * 10) / 10);
+          updateTempDesperdicio(item.name, next);
+        }}
         onIncrement={() => {
-          if (received > 0 && quantity + 1 > received) {
+          const next = Math.round((quantity + 1) * 10) / 10;
+          if (received > 0 && next > received) {
             Alert.alert('Límite', 'No puedes registrar más desperdicio que lo recibido');
             return;
           }
-          updateTempDesperdicio(item.name, quantity + 1);
+          updateTempDesperdicio(item.name, next);
         }}
         onQuantityChange={(value) => {
           const clamped = received > 0 ? Math.min(value, received) : Math.max(0, value);
