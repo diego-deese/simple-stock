@@ -131,7 +131,7 @@ export const ProductItemBase = memo(function ProductItemBase(props: ProductItemB
         </>
       ) : ((showStock !== false) && (
         <View style={styles.stockInfoContainer}>
-          <Text style={styles.stockText}>Recibido: {receivedQuantity ?? 0}</Text>
+          <Text style={styles.stockText}>Disponible: {receivedQuantity ?? 0}</Text>
           <Text style={styles.stockSeparator}> · </Text>
           <Text style={styles.wasteText}>Desperdicio: {quantity}</Text>
         </View>

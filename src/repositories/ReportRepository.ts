@@ -107,12 +107,14 @@ class ReportRepository extends BaseRepository<Report> {
     const reportId = reportResult.lastInsertRowId;
 
     // Insertar los detalles (solo cantidades > 0)
+    const inserted: Array<{ product_name: string; quantity: number }> = [];
     for (const count of counts) {
       if (count.quantity > 0) {
         await db.runAsync(
           'INSERT INTO report_details (report_id, product_name, quantity) VALUES (?, ?, ?)',
           [reportId, count.product_name, count.quantity]
         );
+        inserted.push({ product_name: count.product_name, quantity: count.quantity });
       }
     }
 
@@ -368,6 +370,34 @@ class ReportRepository extends BaseRepository<Report> {
        GROUP BY rd.product_name
        ORDER BY rd.product_name`,
       [type]
+    );
+  }
+
+  /**
+   * Obtiene el total de entradas/salidas por producto para un mes específico.
+   */
+  async getTotalsByProductForMonth(
+    type: MovementType,
+    year: number,
+    month: number
+  ): Promise<{ product_name: string; total: number }[]> {
+    const startDate = `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-01`;
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextMonthYear = month === 12 ? year + 1 : year;
+    const endDate = `${nextMonthYear.toString().padStart(4, '0')}-${nextMonth
+      .toString()
+      .padStart(2, '0')}-01`;
+
+    return this.rawQuery<{ product_name: string; total: number }>(
+      `SELECT rd.product_name, SUM(rd.quantity) as total
+       FROM report_details rd
+       INNER JOIN reports r ON rd.report_id = r.id
+       WHERE r.type = ?
+         AND r.date >= ?
+         AND r.date < ?
+       GROUP BY rd.product_name
+       ORDER BY rd.product_name`,
+      [type, startDate, endDate]
     );
   }
 }

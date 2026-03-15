@@ -20,7 +20,7 @@ import { MonthSelector } from './month-selector';
 const BALANCE_COLOR = colors.success; // Verde para balance
 
 export function BalanceScreen() {
-  const { dbReady, getBalanceMensual, getMonthsWithData, loadInventory, inventory } = useApp();
+  const { dbReady, getBalanceMensual, getMonthsWithData, loadInventory, inventory, reports } = useApp();
   const [balanceMensual, setBalanceMensual] = useState<BalanceMensual[]>([]);
   const [monthsWithData, setMonthsWithData] = useState<MonthWithData[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -32,13 +32,13 @@ export function BalanceScreen() {
     if (dbReady) {
       loadMonthsAndData();
     }
-  }, [dbReady, inventory]);
+  }, [dbReady, inventory, reports]);
 
   useEffect(() => {
     if (dbReady && selectedYear && selectedMonth) {
       loadBalanceData();
     }
-  }, [dbReady, selectedYear, selectedMonth, inventory]);
+  }, [dbReady, selectedYear, selectedMonth, inventory, reports]);
 
   const loadMonthsAndData = async () => {
     try {
@@ -79,9 +79,9 @@ export function BalanceScreen() {
     setSelectedMonth(month);
   };
 
-  // Filtrar productos con actividad
+  // Filtrar productos con actividad (incluyendo desperdicio)
   const activeProducts = balanceMensual.filter(
-    item => item.total_pedidos > 0 || item.total_entregas > 0
+    item => item.total_pedidos > 0 || item.total_entregas > 0 || item.total_desperdicio > 0
   );
 
   if (loading && !refreshing) {
@@ -101,12 +101,14 @@ export function BalanceScreen() {
         backgroundColor={BALANCE_COLOR}
       />
 
-      <MonthSelector
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
-        monthsWithData={monthsWithData}
-        onMonthChange={handleMonthChange}
-      />
+      <View style={styles.monthSelectorWrapper}>
+        <MonthSelector
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          monthsWithData={monthsWithData}
+          onMonthChange={handleMonthChange}
+        />
+      </View>
 
       {activeProducts.length > 0 ? (
         <FlatList
@@ -140,11 +142,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  monthSelectorWrapper: {
+    paddingBottom: 8,
+  },
   list: {
     flex: 1,
     paddingHorizontal: 16,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingVertical: 8,
   },
 });

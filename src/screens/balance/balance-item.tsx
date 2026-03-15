@@ -16,8 +16,11 @@ const PEDIDOS_COLOR = colors.warning;  // Naranja para pedidos
 const ENTREGAS_COLOR = colors.success; // Verde para entregas
 
 export const BalanceItem = memo(function BalanceItem({ item }: BalanceItemProps) {
-  const isCompleto = item.diferencia >= 0;
-  const isFaltante = item.diferencia < 0;
+  const diferencia = item.total_entregas - item.total_pedidos;
+  const disponible = item.total_entregas - item.total_desperdicio;
+
+  const isFaltante = diferencia < 0;
+  const isCompleto = diferencia >= 0;
 
   return (
     <View style={styles.container}>
@@ -45,19 +48,37 @@ export const BalanceItem = memo(function BalanceItem({ item }: BalanceItemProps)
             {item.total_entregas.toFixed(1)}
           </Text>
         </View>
+
+        <View style={styles.detailRow}>
+          <View style={[styles.indicator, { backgroundColor: colors.error }]} />
+          <Text style={styles.detailLabel}>Desperdicio:</Text>
+          <Text style={[styles.detailValue, { color: colors.error }]}>
+            {item.total_desperdicio.toFixed(1)}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.balanceContainer}>
-        <Text style={styles.balanceLabel}>Diferencia:</Text>
-        <Text style={[
-          styles.balanceValue,
-          isCompleto && styles.balanceCompleto,
-          isFaltante && styles.balanceFaltante,
-        ]}>
-          {item.diferencia >= 0 ? '+' : ''}{item.diferencia.toFixed(1)}
-        </Text>
-        {isFaltante && <Text style={styles.statusBadgeFaltante}>Faltante</Text>}
-        {isCompleto && item.diferencia > 0 && <Text style={styles.statusBadgeCompleto}>Completo</Text>}
+        <View style={styles.balanceBlock}>
+          <Text style={styles.balanceLabel}>Diferencia:</Text>
+          <Text style={[
+            styles.balanceValue,
+            isCompleto && styles.balanceCompleto,
+            isFaltante && styles.balanceFaltante,
+          ]}>
+            {diferencia >= 0 ? '+' : ''}{diferencia.toFixed(1)}
+          </Text>
+        </View>
+
+        <View style={styles.balanceBlock}>
+          <Text style={styles.balanceLabel}>Cant. Disponible:</Text>
+          <Text style={[
+            styles.balanceValue,
+            disponible >= 0 ? styles.balanceCompleto : styles.balanceFaltante,
+          ]}>
+            {disponible >= 0 ? '+' : ''}{disponible.toFixed(1)}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -132,6 +153,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 16,
+  },
+  balanceBlock: {
+    flex: 1,
+    minWidth: 120,
   },
   balanceLabel: {
     fontSize: 16,
