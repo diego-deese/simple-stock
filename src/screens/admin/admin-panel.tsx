@@ -62,20 +62,22 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
             }
           }}
         />
-        <MenuItem
-          icon="🔄"
-          title="Reiniciar sincronización"
-          description="Marcar todos los reportes como no sincronizados"
-          onPress={async () => {
-            try {
-              await reportService.clearAllSynced();
-              Alert.alert('Sincronización', 'Todas las marcas de sincronización han sido reiniciadas');
-            } catch (e) {
-              console.error('reset sync failed', e);
-              Alert.alert('Error', 'No se pudo reiniciar la sincronización');
-            }
-          }}
-        />
+        {__DEV__ && (
+          <MenuItem
+            icon="🔄"
+            title="Reiniciar sincronización"
+            description="Marcar todos los reportes como no sincronizados"
+            onPress={async () => {
+              try {
+                await reportService.clearAllSynced();
+                Alert.alert('Sincronización', 'Todas las marcas de sincronización han sido reiniciadas');
+              } catch (e) {
+                console.error('reset sync failed', e);
+                Alert.alert('Error', 'No se pudo reiniciar la sincronización');
+              }
+            }}
+          />
+        )}
       </View>
     </View>
   );
