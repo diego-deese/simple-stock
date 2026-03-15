@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "SimpleStock Offline",
-    "slug": "simplestock-offline",
+    "name": "Abasto Simple",
+    "slug": "abasto-simple",
     "version": "1.0.0",
-    "scheme": "simplestock",
+    "scheme": "abasto-simple",
     "orientation": "portrait",
     "icon": "./assets/zoofari.jpg",
     "userInterfaceStyle": "light",
@@ -12,7 +12,7 @@
     "splash": {
       "image": "./assets/zoofari.jpg",
       "resizeMode": "contain",
-      "backgroundColor": "#007AFF"
+      "backgroundColor": "#F47C1F"
     },
     "ios": {
       "supportsTablet": true,
@@ -21,7 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/zoofari.jpg",
-        "backgroundColor": "#007AFF"
+        "backgroundColor": "#F47C1F"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
