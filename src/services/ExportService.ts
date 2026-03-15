@@ -332,7 +332,7 @@ class ExportService {
 
     // BOM para que Excel reconozca UTF-8
     let csv = '\uFEFF';
-    csv += 'Fecha,Mes,Año,Tipo,ID_Reporte,Pedido_Vinculado,Producto,Unidad,Categoría,Cantidad\n';
+    csv += 'Fecha,Mes,Año,Tipo,ID_Reporte,Pedido_Vinculado,Producto,Unidad,Categoría,Cantidad\r\n';
 
     for (const row of rows) {
       const fecha = formatLocalFromSqlite(row.date, 'es-ES');
@@ -342,12 +342,12 @@ class ExportService {
       const tipo = row.type === 'entregas' ? 'Entregas'
         : row.type === 'pedidos' ? 'Pedidos' : 'Desperdicio';
 
-      csv += `${fecha},${mes},${año},${tipo},${row.report_id},`
+      csv += `${this.escapeCSV(fecha)},${this.escapeCSV(mes)},${año},${this.escapeCSV(tipo)},${row.report_id},`
         + `${row.related_report_id ?? ''},`
         + `${this.escapeCSV(row.product_name)},`
-        + `${row.unit || 'unidad'},`
+        + `${this.escapeCSV(row.unit || 'unidad')},`
         + `${this.escapeCSV(row.category_name || 'Sin categoría')},`
-        + `${row.quantity}\n`;
+        + `${row.quantity}\r\n`;
     }
 
     return csv;

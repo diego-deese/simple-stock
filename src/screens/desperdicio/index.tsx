@@ -81,32 +81,59 @@ export function DesperdicioScreen() {
     return map;
   }, [tempDesperdicio]);
 
-  // Mapa de cantidades recibidas (entregas) por producto
-  const [receivedMap, setReceivedMap] = useState<Map<string, number>>(new Map());
+  // Mapa de cantidad disponible para desperdicio (entregas - desperdicio) por producto
+  const [availableMap, setAvailableMap] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
-    const loadReceived = async () => {
+    const loadAvailable = async () => {
       try {
-        // Preferir conteos temporales de entregas (sesión actual)
-        if (tempCounts && tempCounts.length > 0) {
-          const map = new Map<string, number>();
-          tempCounts.forEach(t => map.set(t.product_name, t.quantity));
-          setReceivedMap(map);
-          return;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+
+        // Totales del mes actual
+        const [deliveries, wastes] = await Promise.all([
+          reportService.getTotalsByProductForMonth('entregas', year, month),
+          reportService.getTotalsByProductForMonth('desperdicio', year, month),
+        ]);
+
+        const deliveryMap = new Map<string, number>();
+        deliveries.forEach(t => deliveryMap.set(t.product_name, t.total));
+
+        const wasteMap = new Map<string, number>();
+        wastes.forEach(t => wasteMap.set(t.product_name, t.total));
+
+        // Incluir desperdicio temporal actual (no guardado aún) para que el
+        // disponible se reduzca mientras el usuario ajusta las cantidades.
+        if (tempDesperdicio && tempDesperdicio.length > 0) {
+          tempDesperdicio.forEach(t => {
+            const existing = wasteMap.get(t.product_name) ?? 0;
+            wasteMap.set(t.product_name, existing + t.quantity);
+          });
         }
 
-        // Fallback: totales históricos de entregas
-        const totals = await reportService.getTotalsByProduct('entregas');
-        const map = new Map<string, number>();
-        totals.forEach(t => map.set(t.product_name, t.total));
-        setReceivedMap(map);
+        // Incluir entregas temporales actuales (no guardadas aún)
+        if (tempCounts && tempCounts.length > 0) {
+          tempCounts.forEach(t => {
+            const existing = deliveryMap.get(t.product_name) ?? 0;
+            deliveryMap.set(t.product_name, existing + t.quantity);
+          });
+        }
+
+        const available = new Map<string, number>();
+        deliveryMap.forEach((delivered, productName) => {
+          const wasted = wasteMap.get(productName) ?? 0;
+          available.set(productName, Math.max(0, delivered - wasted));
+        });
+
+        setAvailableMap(available);
       } catch (error) {
-        console.error('[DesperdicioScreen] Error loading received totals:', error);
+        console.error('[DesperdicioScreen] Error loading available totals:', error);
       }
     };
 
-    loadReceived();
-  }, [tempCounts]);
+    loadAvailable();
+  }, [tempCounts, tempDesperdicio]);
 
   const handleSaveReport = async () => {
     try {
@@ -142,12 +169,12 @@ export function DesperdicioScreen() {
 
   const renderProductItem = useCallback(({ item }: { item: Product }) => {
     const quantity = quantityMap.get(item.name) || 0;
-    const received = receivedMap.get(item.name) || 0;
+    const available = availableMap.get(item.name) || 0;
     return (
       <ProductItemDesperdicio
         item={item}
         quantity={quantity}
-        receivedQuantity={received}
+        receivedQuantity={available}
         isEditMode={isEditMode}
         onDecrement={() => {
           const next = Math.max(0, Math.round((quantity - 1) * 10) / 10);
@@ -155,22 +182,22 @@ export function DesperdicioScreen() {
         }}
         onIncrement={() => {
           const next = Math.round((quantity + 1) * 10) / 10;
-          if (received > 0 && next > received) {
-            Alert.alert('Límite', 'No puedes registrar más desperdicio que lo recibido');
+          if (available > 0 && next > available) {
+            Alert.alert('Límite', 'No puedes registrar más desperdicio que lo disponible.');
             return;
           }
           updateTempDesperdicio(item.name, next);
         }}
         onQuantityChange={(value) => {
-          const clamped = received > 0 ? Math.min(value, received) : Math.max(0, value);
+          const clamped = available > 0 ? Math.min(value, available) : Math.max(0, value);
           if (value !== clamped) {
-            Alert.alert('Límite', 'El valor se ha limitado a la cantidad recibida');
+            Alert.alert('Límite', 'El valor se ha limitado a la cantidad disponible');
           }
           updateTempDesperdicio(item.name, clamped);
         }}
       />
     );
-  }, [quantityMap, updateTempDesperdicio, receivedMap, isEditMode]);
+  }, [quantityMap, updateTempDesperdicio, availableMap, isEditMode]);
 
   const renderSectionHeader = useCallback(({ section }: { section: ProductSection }) => (
     <CategoryHeader title={section.title} />
@@ -219,7 +246,7 @@ export function DesperdicioScreen() {
             renderSectionHeader={renderSectionHeader}
             style={styles.productList}
             contentContainerStyle={styles.productListContent}
-            extraData={{ isEditMode, quantityMap, receivedMap }}
+            extraData={{ isEditMode, quantityMap, availableMap }}
             showsVerticalScrollIndicator={false}
           />
         ) : (

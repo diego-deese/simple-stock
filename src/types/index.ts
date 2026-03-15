@@ -128,6 +128,7 @@ export interface BalanceMensual {
   total_entregas: number;  // Lo que llegó
   total_desperdicio: number; // Lo que se desperdició
   diferencia: number;      // Entregas - Pedidos - Desperdicio
+  diferencia_sin_desperdicio: number; // Entregas - Pedidos
 }
 
 /**

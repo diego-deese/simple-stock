@@ -140,6 +140,7 @@ class InventoryRepository extends BaseRepository<Inventory> {
         c.name as category_name,
         COALESCE(pedidos.total, 0) as total_pedidos,
         COALESCE(entregas.total, 0) as total_entregas,
+         COALESCE(entregas.total, 0) - COALESCE(pedidos.total, 0) as diferencia_sin_desperdicio,
          COALESCE(entregas.total, 0) - COALESCE(pedidos.total, 0) - COALESCE(desperdicios.total, 0) as diferencia,
          COALESCE(desperdicios.total, 0) as total_desperdicio
 
@@ -176,8 +177,14 @@ class InventoryRepository extends BaseRepository<Inventory> {
         AND (pedidos.total > 0 OR entregas.total > 0 OR desperdicios.total > 0)
       ORDER BY c.sort_order, p.name
     `;
-    
-    return this.rawQuery<BalanceMensual>(sql, [startDate, endDate, startDate, endDate]);
+
+    const results = await this.rawQuery<BalanceMensual>(
+      sql,
+      [startDate, endDate, startDate, endDate, startDate, endDate]
+    );
+
+
+    return results;
   }
 
   /**

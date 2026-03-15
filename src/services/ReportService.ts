@@ -264,6 +264,14 @@ class ReportService {
     return reportRepository.getTotalsByProduct(type);
   }
 
+  async getTotalsByProductForMonth(
+    type: MovementType,
+    year: number,
+    month: number
+  ): Promise<{ product_name: string; total: number }[]> {
+    return reportRepository.getTotalsByProductForMonth(type, year, month);
+  }
+
   // === GESTIÓN DE CONTEOS TEMPORALES (ENTREGAS) ===
 
   /**
