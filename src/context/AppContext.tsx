@@ -398,6 +398,10 @@ export function AppProvider({ children }: AppProviderProps) {
       // refresh global report list so history UI updates immediately
       const reports = await reportService.getAllReports();
       dispatch({ type: 'SET_REPORTS', payload: reports });
+
+      // Clear the temporary entregas counts so they don't get double-counted
+      // when moving between screens (e.g., desperdicio).
+      dispatch({ type: 'CLEAR_TEMP_COUNTS' });
     },
     loadReports: async () => {
       const reports = await reportService.getAllReports();
