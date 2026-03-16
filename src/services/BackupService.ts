@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { exportService } from './ExportService';
 import { reportService } from './ReportService';
-import { BACKUP_ENDPOINT } from './BackupConfig';
+import { getEffectiveBackupEndpoint } from './EndpointConfig';
 
 // note: jsrsasign and Drive credentials are no longer used
 
@@ -39,12 +39,14 @@ export function initNetworkBackupListener() {
  * Trigger a backup immediately. Can be called by a manual button or from
  * the network listener.
  */
-function ensureBackupConfig(): void {
-  if (!BACKUP_ENDPOINT) {
+async function ensureBackupConfig(): Promise<string> {
+  const endpoint = await getEffectiveBackupEndpoint();
+  if (!endpoint) {
     throw new Error(
-      'Backup endpoint is not configured. Set BACKUP_ENDPOINT in your environment or Expo extras.'
+      'Backup endpoint is not configured. Configure BACKUP_ENDPOINT in the app settings or in your environment.'
     );
   }
+  return endpoint;
 }
 
 export async function backupNow(): Promise<void> {
@@ -58,7 +60,7 @@ export async function backupNow(): Promise<void> {
   }
 
   try {
-    ensureBackupConfig();
+    const endpoint = await ensureBackupConfig();
     // optionally collect some metadata (e.g. number of reports)
     const reports = await reportService.getAllReports();
     console.log('[BackupService] reports to back up', reports.length);
@@ -80,7 +82,7 @@ export async function backupNow(): Promise<void> {
     const filename = `backup-${new Date().toISOString()}.db`;
 
     // send to GAS endpoint
-    const result = await postBackupToEndpoint(base64db, filename);
+    const result = await postBackupToEndpoint(endpoint, base64db, filename);
     console.log('[BackupService] endpoint call result', result);
     await recordLastBackup();
     Alert.alert('Backup', 'Copia de seguridad subida correctamente.');
@@ -99,7 +101,7 @@ async function getDatabaseFileUri(): Promise<string> {
   return `${fs.documentDirectory}SQLite/${dbName}`;
 }
 
-async function postBackupToEndpoint(base64db: string, filename: string): Promise<any> {
+async function postBackupToEndpoint(endpoint: string, base64db: string, filename: string): Promise<any> {
   const payload = {
     metadata: {
       date: new Date().toISOString(),
@@ -108,9 +110,9 @@ async function postBackupToEndpoint(base64db: string, filename: string): Promise
     },
     file_b64: base64db,
   };
-  console.log('[BackupService] posting payload', { filename, size: base64db?.length });
+  console.log('[BackupService] posting payload', { endpoint, filename, size: base64db?.length });
 
-  const resp = await fetch(BACKUP_ENDPOINT, {
+  const resp = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
