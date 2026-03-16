@@ -19,6 +19,10 @@ interface FormInputProps extends TextInputProps {
   required?: boolean;
   /** Custom style for the container */
   containerStyle?: StyleProp<ViewStyle>;
+  /** Make the input multi-line (textarea style) */
+  multiline?: boolean;
+  /** Number of lines to show when multiline */
+  numberOfLines?: number;
 }
 
 /**
@@ -48,7 +52,12 @@ const FormInput = forwardRef<TextInput, FormInputProps>(({
       <View style={styles.inputContainer}>
         <TextInput
           ref={ref}
-          style={[styles.input, isPasswordField && styles.inputWithIcon, style]}
+          style={[
+            styles.input,
+            isPasswordField && styles.inputWithIcon,
+            textInputProps.multiline && styles.inputMultiline,
+            style,
+          ]}
           placeholderTextColor={placeholderTextColor}
           secureTextEntry={isPasswordField && !showPassword}
           {...textInputProps}
@@ -100,6 +109,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.textPrimary,
+  },
+  inputMultiline: {
+    minHeight: 120,
+    textAlignVertical: 'top',
   },
   inputWithIcon: {
     paddingRight: 50,
