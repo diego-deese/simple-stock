@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '@theme/colors';
 import { MenuItem } from './menu-item';
@@ -19,6 +13,68 @@ interface AdminPanelProps {
 export function AdminPanel({ onLogout }: AdminPanelProps) {
   const router = useRouter();
 
+  const menuItems = [
+    {
+      key: 'catalog',
+      icon: '📦',
+      title: 'Catálogo de Productos',
+      description: 'Agregar, editar o eliminar productos',
+      onPress: () => router.navigate('/catalog'),
+    },
+    {
+      key: 'categories',
+      icon: '🏷️',
+      title: 'Categorías',
+      description: 'Organizar productos por tipo',
+      onPress: () => router.navigate('/categories'),
+    },
+    {
+      key: 'history',
+      icon: '📊',
+      title: 'Historial de Reportes',
+      description: 'Ver y exportar reportes guardados',
+      onPress: () => router.navigate('/history'),
+    },
+    {
+      key: 'backup',
+      icon: '💾',
+      title: 'Exportar copia',
+      description: 'Genera y sube una copia de seguridad a Drive',
+      onPress: async () => {
+        try {
+          await backupNow();
+        } catch (e) {
+          console.error('manual backup failed', e);
+        }
+      },
+    },
+    {
+      key: 'endpoint',
+      icon: '⚙️',
+      title: 'Destino de copia',
+      description: 'Configurar a dónde se sube la copia de seguridad',
+      onPress: () => router.navigate('/endpoint'),
+    },
+  ];
+
+  if (__DEV__) {
+    menuItems.push({
+      key: 'reset-sync',
+      icon: '🔄',
+      title: 'Reiniciar sincronización',
+      description: 'Marcar todos los reportes como no sincronizados',
+      onPress: async () => {
+        try {
+          await reportService.clearAllSynced();
+          Alert.alert('Sincronización', 'Todas las marcas de sincronización han sido reiniciadas');
+        } catch (e) {
+          console.error('reset sync failed', e);
+          Alert.alert('Error', 'No se pudo reiniciar la sincronización');
+        }
+      },
+    });
+  }
+
   return (
     <View style={styles.container}>
       <ScreenHeader
@@ -31,54 +87,20 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
         }
       />
 
-      <View style={styles.menuContainer}>
-        <MenuItem
-          icon="📦"
-          title="Catálogo de Productos"
-          description="Agregar, editar o eliminar productos"
-          onPress={() => router.navigate('/catalog')}
-        />
-        <MenuItem
-          icon="🏷️"
-          title="Categorías"
-          description="Organizar productos por tipo"
-          onPress={() => router.navigate('/categories')}
-        />
-        <MenuItem
-          icon="📊"
-          title="Historial de Reportes"
-          description="Ver y exportar reportes guardados"
-          onPress={() => router.navigate('/history')}
-        />
-        <MenuItem
-          icon="💾"
-          title="Exportar copia"
-          description="Genera y sube una copia de seguridad a Drive"
-          onPress={async () => {
-            try {
-              await backupNow();
-            } catch (e) {
-              console.error('manual backup failed', e);
-            }
-          }}
-        />
-        {__DEV__ && (
+      <FlatList
+        data={menuItems}
+        keyExtractor={item => item.key}
+        contentContainerStyle={styles.menuContainer}
+        renderItem={({ item }) => (
           <MenuItem
-            icon="🔄"
-            title="Reiniciar sincronización"
-            description="Marcar todos los reportes como no sincronizados"
-            onPress={async () => {
-              try {
-                await reportService.clearAllSynced();
-                Alert.alert('Sincronización', 'Todas las marcas de sincronización han sido reiniciadas');
-              } catch (e) {
-                console.error('reset sync failed', e);
-                Alert.alert('Error', 'No se pudo reiniciar la sincronización');
-              }
-            }}
+            icon={item.icon}
+            title={item.title}
+            description={item.description}
+            onPress={item.onPress}
           />
         )}
-      </View>
+      />
+
     </View>
   );
 }
@@ -101,5 +123,9 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     padding: 20,
+  },
+  devSection: {
+    marginTop: 20,
+    paddingHorizontal: 20,
   },
 });
